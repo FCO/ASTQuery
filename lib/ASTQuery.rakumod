@@ -21,50 +21,81 @@ enum ASTTypeOption is export (
 		ASTType.new(:type(RakuAST::Statement::IfWith), :main-param<condition>),
 		ASTType.new(:type(RakuAST::Statement::Unless), :main-param<condition>),
 	]),
+	int         => ASTType.new(:type(RakuAST::IntLiteral)),
 );
 
 has ASTType $.type;
 
 method ACCEPTS($node) {
-	return self.Multi::validate($node) if $!type.type =:= MultiValue;
-	[&&] self.+validate($node);
+	return self.Multi::validate($node) if $!type.defined && $!type.type =:= MultiValue;
+	my $ans = [&&] self.+validate($node);
+	say "{self.^name}: ACCEPTS: $ans" if %*ENV<ASTQUERY_DEBUG>;
+	$ans
 }
 
 method validate($node) {
-	$!type.defined && $node ~~ $!type.type;
+	say "validate type: $node.^name() { $node.DEPARSE } ~~ {.type.^name with $!type}" if %*ENV<ASTQUERY_DEBUG>;
+	my $ans = !$!type.defined || $node ~~ $!type.type;
+	say "type: $ans" if %*ENV<ASTQUERY_DEBUG>;
+	$ans
 }
 
 role Multi {
 	has $.candidates;
 	method validate($node) {
-		[False, |$!candidates[]].reduce: -> $ans, $can {
+		#say "validate Multi: $node.^name() { $node.DEPARSE }" if %*ENV<ASTQUERY_DEBUG>;
+		my $ans = [False, |$!candidates[]].reduce: -> $ans, $can {
 			$ans || $can.ACCEPTS: $node;
 		}
+		say "Multi: $ans" if %*ENV<ASTQUERY_DEBUG>;
+		$ans
+	}
+}
+
+role HasIntValue {
+	has Int $.value;
+	method validate($node) {
+		say "validate IntValue: $node.^name() { $node.DEPARSE }" if %*ENV<ASTQUERY_DEBUG>;
+		say $node, " eqv ", RakuAST::IntLiteral.new($!value) if %*ENV<ASTQUERY_DEBUG>;
+		my $ans = $node eqv RakuAST::IntLiteral.new($!value);
+		say "HasIntValue: $ans" if %*ENV<ASTQUERY_DEBUG>;
+		$ans
 	}
 }
 
 role HasName {
 	has Str $.name;
 	method validate($node) {
-		$node.^can("name") && $node.name eqv RakuAST::Name.from-identifier($!name);
+		#say "validate Name: $node.^name() { $node.DEPARSE }" if %*ENV<ASTQUERY_DEBUG>;
+		my $ans = $node.^can("name") && $node.name eqv RakuAST::Name.from-identifier($!name);
+		say "HasName: $ans" if %*ENV<ASTQUERY_DEBUG>;
+		$ans
 	}
 }
 
 role HasCondition {
 	has $.condition;
 	method validate($node) {
-		$node.^can("condition") && $node.condition eqv $!condition;
+		#say "validate Condition: $node.^name() { $node.DEPARSE }" if %*ENV<ASTQUERY_DEBUG>;
+		my $ans = $node.^can("condition") && $node.condition eqv $!condition;
+		say "HasCondition: $ans" if %*ENV<ASTQUERY_DEBUG>;
+		$ans
 	}
 }
 
 role Children {
 	has $.children;
 	method validate($node) {
+		say "validate Children: $node.^name() { $node.DEPARSE }" if %*ENV<ASTQUERY_DEBUG>;
 		my $num = $!children.elems;
 		my @sub = gather {$node.visit-children: &take}.head: $num;
+		say @sub if %*ENV<ASTQUERY_DEBUG>;
+		say $!children[] if %*ENV<ASTQUERY_DEBUG>;
 		return False unless @sub == $num;
 
-		[&&] ($num > 0), |(@sub Z[~~] $!children[]);
+		my $ans = [&&] ($num > 0), |(@sub Z[~~] $!children[]);
+		say "Children: $ans" if %*ENV<ASTQUERY_DEBUG>;
+		$ans
 	}
 }
 
@@ -108,6 +139,12 @@ multi ast-query(@children where {.are: ::?CLASS}, **@params, :$obj is copy = ::?
 	ast-query :$obj, |@params
 }
 
+multi ast-query(Int $value, **@params, :$obj is copy = ::?CLASS.new: :type(ASTTypeOption::int.value)) {
+	$obj = $obj but HasIntValue($value);
+	return $obj unless @params;
+	ast-query :$obj, |@params
+}
+
 =begin pod
 
 =head1 NAME
@@ -116,15 +153,45 @@ ASTQuery - blah blah blah
 
 =head1 SYNOPSIS
 
-=begin code :lang<raku>
+=begin code
 
-use ASTQuery;
+❯ raku -Ilib -MASTQuery -e 'use experimental :rakuast; say Q|unless True { say 42 }|.AST.grep: ast-query [ast-query 42]'
+(RakuAST::ArgList.new(
+  RakuAST::IntLiteral.new(42)
+))
+❯ raku -Ilib -MASTQuery -e 'use experimental :rakuast; say Q|unless True { say 42 }|.AST.grep: ast-query conditional'
+(RakuAST::Statement::Unless.new(
+  condition => RakuAST::Term::Name.new(
+    RakuAST::Name.from-identifier("True")
+  ),
+  body      => RakuAST::Block.new(
+    body => RakuAST::Blockoid.new(
+      RakuAST::StatementList.new(
+        RakuAST::Statement::Expression.new(
+          expression => RakuAST::Call::Name::WithoutParentheses.new(
+            name => RakuAST::Name.from-identifier("say"),
+            args => RakuAST::ArgList.new(
+              RakuAST::IntLiteral.new(42)
+            )
+          )
+        )
+      )
+    )
+  )
+))
+❯ raku -Ilib -MASTQuery -e 'use experimental :rakuast; say Q|unless True { say 42 }|.AST.grep: ast-query call, "say"'
+(RakuAST::Call::Name::WithoutParentheses.new(
+  name => RakuAST::Name.from-identifier("say"),
+  args => RakuAST::ArgList.new(
+    RakuAST::IntLiteral.new(42)
+  )
+))
 
 =end code
 
 =head1 DESCRIPTION
 
-ASTQuery is ...
+ASTQuery is a way to match RakuAST
 
 =head1 AUTHOR
 
