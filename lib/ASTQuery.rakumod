@@ -1,4 +1,6 @@
 use experimental :rakuast;
+use ASTQuery::Grammar;
+use ASTQuery::Actions;
 unit class ASTQuery;
 
 sub term:<ast-true> is export {RakuAST::Term::Name.new( RakuAST::Name.from-identifier("True"))}
@@ -100,6 +102,10 @@ role Children {
 }
 
 proto ast-query(|c) is export {*}
+
+multi ast-query(Str $selector) {
+	ASTQuery::Grammar.parse($selector, :actions(ASTQuery::Actions)).made
+}
 
 multi ast-query(ASTType $ast-type, **@params) is default {
 	my $obj = ::?CLASS.new: :type($ast-type);
