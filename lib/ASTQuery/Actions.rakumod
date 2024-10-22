@@ -6,6 +6,7 @@ method TOP($/) { make $<list>.made }
 method word($/) { make $/.Str }
 method ns($/)   { make $/.Str }
 
+method str:<number>($/) { make $/.Int }
 method str:<double>($/) { make $<str>.Str }
 method str:<simple>($/) { make $<str>.Str }
 

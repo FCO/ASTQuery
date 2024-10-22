@@ -5,6 +5,7 @@ token word { <-[\s#.\[\]=]>+ }
 token ns { <[\w:-]>+ }
 
 proto token str          { *                        }
+multi token str:<number> { \d+ }
 multi token str:<double> { '"' ~ '"' $<str>=<-["]>* }
 multi token str:<simple> { "'" ~ "'" $<str>=<-[']>* }
 
