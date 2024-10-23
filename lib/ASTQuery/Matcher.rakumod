@@ -1,4 +1,4 @@
-use experimental :rakuast;
+use experimental :rakuast, :will-complain;
 unit class ASTQuery::Matcher;
 
 my %groups is Map = (
@@ -14,8 +14,7 @@ my %groups is Map = (
 	apply-op    => [
 		RakuAST::ApplyInfix,
 		RakuAST::ApplyListInfix,
-		RakuAST::ApplyDottyInfix,
-		RakuAST::ApplyDottyInfix,
+		#RakuAST::ApplyDottyInfix,
 		RakuAST::ApplyPostfix,
 		RakuAST::Ternary,
 	],
@@ -26,24 +25,24 @@ my %groups is Map = (
 );
 
 my %id is Map = (
-	"RakuAST::Call"                           => "name",
-	"RakuAST::Statement::Expression"          => "expression",
-	"RakuAST::Statement::IfWith"              => "condition",
-	"RakuAST::Statement::Unless"              => "condition",
-	"RakuAST::Literal"                        => "value",
-	"RakuAST::Name"                           => "simple-identifier",
-	"RakuAST::Term::Name"                     => "name",
-	"RakuAST::ApplyInfix"                     => "infix",
-	"RakuAST::Infixish"                       => "infix",
-	"RakuAST::Infix"                          => "operator",
-	"RakuAST::Prefix"                         => "operator",
-	"RakuAST::Postfix"                        => "operator",
-	"RakuAST::ApplyInfix"                     => "infix",
-	"RakuAST::ApplyListInfix"                 => "infix",
-	"RakuAST::ApplyDottyInfix"                => "infix",
-	"RakuAST::ApplyPostfix"                   => "postfix",
-	"RakuAST::FunctionInfix"                  => "function",
-	"RakuAST::ArgList"                        => "args",
+	"RakuAST::Call"                  => "name",
+	"RakuAST::Statement::Expression" => "expression",
+	"RakuAST::Statement::IfWith"     => "condition",
+	"RakuAST::Statement::Unless"     => "condition",
+	"RakuAST::Literal"               => "value",
+	"RakuAST::Name"                  => "simple-identifier",
+	"RakuAST::Term::Name"            => "name",
+	"RakuAST::ApplyInfix"            => "infix",
+	"RakuAST::Infixish"              => "infix",
+	"RakuAST::Infix"                 => "operator",
+	"RakuAST::Prefix"                => "operator",
+	"RakuAST::Postfix"               => "operator",
+	"RakuAST::ApplyInfix"            => "infix",
+	"RakuAST::ApplyListInfix"        => "infix",
+	"RakuAST::ApplyDottyInfix"       => "infix",
+	"RakuAST::ApplyPostfix"          => "postfix",
+	"RakuAST::FunctionInfix"         => "function",
+	"RakuAST::ArgList"               => "args",
 );
 
 method get-id-field($node) {
@@ -52,18 +51,21 @@ method get-id-field($node) {
 	}
 }
 
-has Str $.class;
-has Str $.group where { %groups{$_} };
+subset ASTClass of Str will complain {"$_ is not a valid class"} where { !.defined || ::(.Str) !~~ Failure }
+subset ASTGroup of Str will complain {"$_ is not a valid group"} where { !.defined || %groups{.Str} }
+
+has ASTClass $.class;
+has ASTGroup $.group;
 has $.id;
 has %.atts;
 has %.params;
 
 method ACCEPTS($node) {
-	my $key = $.get-id-field: $node;
-	so ($!class ?? $.validate-class($node, $!class)                        !! True)
-	&& ($!group ?? $.validate-class($node, |%groups{$!group})              !! True)
-	&& ($!id    ?? $key.defined && $.validate-atts($node, %($key => $!id)) !! True)
-	&& (%!atts  ?? $.validate-atts($node, %!atts)                          !! True)
+	my $key = self.get-id-field: $node;
+	so ($!class ?? self.validate-class($node, ::($!class))                    !! True)
+	&& ($!group ?? self.validate-class($node, |%groups{$!group})              !! True)
+	&& ($!id    ?? $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
+	&& (%!atts  ?? self.validate-atts($node, %!atts)                          !! True)
 	# TODO: params
 }
 
@@ -75,7 +77,7 @@ method validate-class($node, **@classes) {
 
 method validate-atts($node, %atts) {
 	[True, |%atts.pairs].reduce: -> $ans, (:$key, :$value) {
-		$ans && $.validate-value: $node, $key, $value
+		$ans && self.validate-value: $node, $key, $value
 	}
 }
 
@@ -83,7 +85,7 @@ method validate-value($node, $key, $value) {
 	do if $node.^name.starts-with("RakuAST") && !$value.^name.starts-with: "RakuAST" {
 		return False unless $key;
 		my $nnode = $node."$key"();
-		$.validate-value: $nnode, $.get-id-field($nnode), $value
+		self.validate-value: $nnode, $.get-id-field($nnode), $value
 	} else { 
 		$node ~~ $value
 	}
