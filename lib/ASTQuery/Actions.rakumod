@@ -10,12 +10,12 @@ method str:<number>($/) { make $/.Int }
 method str:<double>($/) { make $<str>.Str }
 method str:<simple>($/) { make $<str>.Str }
 
-method list:<simple>($/)  { make $<node>.made }
+method list:<child>($/)   { make my $node = $<node>.made; $node.child = $<str-or-list>.made }
 #method list:<many>($/)   { <node> ',' <list> }
 #method list:<descen>($/) { <node> \s+ <list> }
-#method list:<child>($/)  { <node> '>' <list> }
 #method list:<after>($/)  { <node> '+' <list> }
 #method list:<before>($/) { <node> '~' <list> }
+method list:<simple>($/)  { make $<node>.made }
 
 method str-or-list:<str>($/)  { make $<str>.made  }
 method str-or-list:<list>($/) { make $<list>.made }
@@ -29,6 +29,7 @@ method node($/) {
 method node-part:<node>($/)       { make (:class($<ns>.made))                    }
 method node-part:<class>($/)      { make (:group($<word>.made))                  }
 method node-part:<id>($/)         { make (:id($<word>.made))                     }
+method node-part:<name>($/)       { make (:name($<word>.made))                     }
 #method node-part:<*>($/)          { '*'                                          }
 #method node-part:<par-simple>($/) { ':' <word>                                   }
 #method node-part:<par-arg>($/)    { ':' <word> '(' ~ ')' \d+                     }

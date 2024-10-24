@@ -59,14 +59,50 @@ has ASTGroup $.group;
 has $.id;
 has %.atts;
 has %.params;
+has $.child is rw;
+has $.descendent is rw;
+has Str $.name;
+
+multi method gist(::?CLASS:D: :$inside = False) {
+	"{
+		self.^name ~ ".new(" unless $inside
+	}{
+		.Str with $!class
+	}{
+		'.' ~ .Str with $!group
+	}{
+		'#' ~ .Str with $!id
+	}{
+		"[" ~ %!atts.map(-> $k, $v { $k ~ "=$v.gist()" unless $v =:= Whatever }).join(', ') ~ ']' if %!atts
+	}{
+		'$' ~ .Str with $!name
+	}{
+		" > " ~ .gist(:inside) with $!child
+	}{
+		")" unless $inside
+	}"
+}
 
 method ACCEPTS($node) {
+	#say "ACCEPTS: ", self;
 	my $key = self.get-id-field: $node;
 	so ($!class ?? self.validate-class($node, ::($!class))                    !! True)
 	&& ($!group ?? self.validate-class($node, |%groups{$!group})              !! True)
 	&& ($!id    ?? $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
 	&& (%!atts  ?? self.validate-atts($node, %!atts)                          !! True)
+	&& ($!child ?? self.validate-child($node, $!child)                        !! True)
 	# TODO: params
+}
+
+method validate-child($node, $child) {
+	my $child-match = $*match.new(:ast($node), :matcher($child), :$*match, :ignore-root);
+	my $resp = $child-match.query-children-only;
+	if $resp.list.elems {
+		if $resp.hash {
+			$*match.hash.push: $_ for $resp.hash.pairs
+		}
+		return True
+	}
 }
 
 method validate-class($node, **@classes) {
@@ -84,6 +120,7 @@ method validate-atts($node, %atts) {
 method validate-value($node, $key, $value) {
 	do if $node.^name.starts-with("RakuAST") && !$value.^name.starts-with: "RakuAST" {
 		return False unless $key;
+		return False unless $node.^can: $key;
 		my $nnode = $node."$key"();
 		self.validate-value: $nnode, $.get-id-field($nnode), $value
 	} else { 
