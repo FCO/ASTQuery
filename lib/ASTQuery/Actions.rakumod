@@ -10,12 +10,30 @@ method str:<number>($/) { make $/.Int }
 method str:<double>($/) { make $<str>.Str }
 method str:<simple>($/) { make $<str>.Str }
 
-method list:<child>($/)   { make my $node = $<node>.made; $node.child = $<str-or-list>.made }
-#method list:<many>($/)   { <node> ',' <list> }
-#method list:<descen>($/) { <node> \s+ <list> }
-#method list:<after>($/)  { <node> '+' <list> }
-#method list:<before>($/) { <node> '~' <list> }
-method list:<simple>($/)  { make $<node>.made }
+method list:<descen>($/)  {
+	make my $node = $<node>.made;
+	$node.descendant = $<str-or-list>.made
+}
+method list:<gchild>($/)  {
+	make my $node = $<node>.made;
+	$node.gchild = $<str-or-list>.made
+}
+method list:<child>($/)   {
+	make my $node = $<node>.made;
+	$node.child = $<str-or-list>.made
+}
+method list:<ascend>($/)   {
+	make my $node = $<node>.made;
+	$node.ascendant = $<str-or-list>.made
+}
+method list:<parent>($/)   {
+	make my $node = $<node>.made;
+	$node.parent = $<str-or-list>.made
+}
+#method list:<many>($/)    { <node> ',' <list> }
+#method list:<after>($/)   { <node> '+' <list> }
+#method list:<before>($/)  { <node> '~' <list> }
+method list:<simple>($/)   { make $<node>.made }
 
 method str-or-list:<str>($/)  { make $<str>.made  }
 method str-or-list:<list>($/) { make $<list>.made }

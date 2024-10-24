@@ -6,6 +6,7 @@ has @.list is Array handles <AT-POS push>;
 has %.hash is Hash  handles <AT-KEY>;
 has $.matcher;
 has $.ast;
+has Bool $.recursive;
 
 method of {RakuAST::Node}
 
@@ -21,14 +22,17 @@ sub match($match, $ast, $matcher) {
 	}
 }
 
-sub visitor($node, :run-children($recursive) = True, :$ignore-root = False) {
-	#say "visitor: $recursive, $ignore-root: ", $*matcher;
+sub visitor($node, :$run-children, :$recursive = $*recursive // True, :$ignore-root = False) {
+	#say "visitor: $recursive, $ignore-root: ", $*matcher, " -> ", $node.^name;
 	$*position++;
+	my @lineage = @*LINEAGE;
 	match $*match, $node, $*matcher unless $ignore-root;
 	#say $*match.list;
 	{
+		my @*LINEAGE = $node, |@lineage;
+		my $*recursive = $run-children.defined ?? !$run-children !! $recursive;
 		my $*position = 0;
-		$node.visit-children: &?ROUTINE if $recursive;
+		$node.visit-children: &?ROUTINE if $run-children || $recursive;
 	}
 }
 
@@ -36,7 +40,15 @@ method query {
 	my $*match = self;
 	my $*matcher = $!matcher;
 	my $*position = 0;
-	visitor $!ast, :run-children;
+	visitor $!ast;
+	self
+}
+
+method query-descendants-only {
+	my $*match = self;
+	my $*matcher = $!matcher;
+	my $*position = 0;
+	visitor $!ast, :ignore-root;
 	self
 }
 
@@ -45,5 +57,13 @@ method query-children-only {
 	my $*matcher = $!matcher;
 	my $*position = 0;
 	visitor $!ast, :run-children, :ignore-root;
+	self
+}
+
+method query-root-only {
+	my $*match = self;
+	my $*matcher = $!matcher;
+	my $*position = 0;
+	visitor $!ast, :!recursive;
 	self
 }

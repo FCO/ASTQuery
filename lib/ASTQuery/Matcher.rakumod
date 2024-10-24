@@ -22,6 +22,13 @@ my %groups is Map = (
 		RakuAST::Statement::IfWith,
 		RakuAST::Statement::Unless,
 	],
+	ignorable => [
+		RakuAST::Block,
+		RakuAST::Blockoid,
+		RakuAST::StatementList,
+		RakuAST::Statement::Expression,
+		RakuAST::ArgList,
+	],
 );
 
 my %id is Map = (
@@ -43,6 +50,7 @@ my %id is Map = (
 	"RakuAST::ApplyPostfix"          => "postfix",
 	"RakuAST::FunctionInfix"         => "function",
 	"RakuAST::ArgList"               => "args",
+	"RakuAST::Var::Lexical"          => "desigilname",
 );
 
 method get-id-field($node) {
@@ -60,7 +68,10 @@ has $.id;
 has %.atts;
 has %.params;
 has $.child is rw;
-has $.descendent is rw;
+has $.gchild is rw;
+has $.parent is rw;
+has $.descendant is rw;
+has $.ascendant is rw;
 has Str $.name;
 
 multi method gist(::?CLASS:D: :$inside = False) {
@@ -73,11 +84,17 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	}{
 		'#' ~ .Str with $!id
 	}{
-		"[" ~ %!atts.map(-> $k, $v { $k ~ "=$v.gist()" unless $v =:= Whatever }).join(', ') ~ ']' if %!atts
+		"[" ~ %!atts.kv.map(-> $k, $v { $k ~ ( $v =:= Whatever ?? "" !! "=$v.gist()" ) }).join(', ') ~ ']' if %!atts
 	}{
 		'$' ~ .Str with $!name
 	}{
 		" > " ~ .gist(:inside) with $!child
+	}{
+		" >> " ~ .gist(:inside) with $!gchild
+	}{
+		" < " ~ .gist(:inside) with $!parent
+	}{
+		" " ~ .gist(:inside) with $!descendant
 	}{
 		")" unless $inside
 	}"
@@ -85,24 +102,92 @@ multi method gist(::?CLASS:D: :$inside = False) {
 
 method ACCEPTS($node) {
 	#say "ACCEPTS: ", self;
+	my %*values;
 	my $key = self.get-id-field: $node;
-	so ($!class ?? self.validate-class($node, ::($!class))                    !! True)
-	&& ($!group ?? self.validate-class($node, |%groups{$!group})              !! True)
-	&& ($!id    ?? $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
-	&& (%!atts  ?? self.validate-atts($node, %!atts)                          !! True)
-	&& ($!child ?? self.validate-child($node, $!child)                        !! True)
-	# TODO: params
+	my $ans = so ($!class    ?? self.validate-class($node, ::($!class))                    !! True)
+		&& ($!group      ?? self.validate-class($node, |%groups{$!group})              !! True)
+		&& ($!id         ?? $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
+		&& (%!atts       ?? self.validate-atts($node, %!atts)                          !! True)
+		&& ($!child      ?? self.validate-child($node, $!child)                        !! True)
+		&& ($!descendant ?? self.validate-descendant($node, $!descendant)              !! True)
+		&& ($!gchild     ?? self.validate-gchild($node, $!gchild)                      !! True)
+		&& ($!parent     ?? self.validate-parent($node, $!parent)                      !! True)
+		&& ($!ascendant  ?? self.validate-ascendant($node, $!ascendant)                !! True)
+		# TODO: params
+	;
+
+	if $ans {
+		for %*values.kv -> $key, $value {
+			$*match.hash.push: $key => $value
+		}
+	}
+	return $ans
 }
 
-method validate-child($node, $child) {
-	my $child-match = $*match.new(:ast($node), :matcher($child), :$*match, :ignore-root);
-	my $resp = $child-match.query-children-only;
+method validate-ascendant($, $parent) {
+	[||] do for @*LINEAGE -> $ascendant {
+		my $parent-match = $*match.new(:ast($ascendant), :matcher($parent), :$*match);
+		my $resp = $parent-match.query-root-only;
+		do if $resp.list.elems {
+			if $resp.hash {
+				for $resp.hash.kv -> $key, $value {
+					%*values.push: $key => $value
+				}
+			}
+			True
+		}
+	}
+}
+
+method validate-parent($, $parent) {
+	my $parent-match = $*match.new(:ast(@*LINEAGE.head), :matcher($parent), :$*match);
+	my $resp = $parent-match.query-root-only;
 	if $resp.list.elems {
 		if $resp.hash {
-			$*match.hash.push: $_ for $resp.hash.pairs
+			for $resp.hash.kv -> $key, $value {
+				%*values.push: $key => $value
+			}
 		}
 		return True
 	}
+}
+
+method validate-descendant($node, $child) {
+	my $descendant-match = $*match.new(:ast($node), :matcher($child), :$*match);
+	my $resp = $descendant-match.query-descendants-only;
+	if $resp.list.elems {
+		if $resp.hash {
+			for $resp.hash.kv -> $key, $value {
+				%*values.push: $key => $value
+			}
+		}
+		return True
+	}
+}
+
+method validate-gchild($node, $gchild) {
+	my $gchild-result = self.validate-child($node, $gchild);
+	return True if $gchild-result;
+
+	my @list = self.query-child($node, ::?CLASS.new: :group<ignorable>);
+	[||] do for @list -> $node {
+		self.validate-gchild: $node, $gchild
+	}
+}
+
+method query-child($node, $child, *%pars) {
+	my $child-match = $*match.new(:ast($node), :matcher($child), :$*match);
+	my $resp = $child-match.query-children-only;
+	if $resp.elems {
+		if $resp.hash {
+			%*values.push: $_ for $resp.hash.pairs
+		}
+	}
+	$resp.list
+}
+
+method validate-child($node, $child) {
+	self.query-child($node, $child).Bool
 }
 
 method validate-class($node, **@classes) {
