@@ -161,7 +161,7 @@ Output:
 
 Explanation:
 
-- The query .apply-op[left=1, right=3] matches ApplyOp nodes with left operand 1 and right operand 3.
+- The query `.apply-op[left=1, right=3]` matches ApplyOp nodes with left operand 1 and right operand 3.
 
 ### Example 2: Using the Ancestor Operator << and Named Captures
 
@@ -203,7 +203,7 @@ Output:
 
 Explanation:
 
-- The query RakuAST::Infix << .conditional$cond .int#2$int:
+- The query `RakuAST::Infix << .conditional$cond .int#2$int`:
 
 - Matches Infix nodes that have an ancestor matching .conditional$cond.
 
@@ -243,7 +243,7 @@ Output:
 
 Explanation:
 
-- The query RakuAST::Infix < .apply-op[right=2]$op:
+- The query `RakuAST::Infix < .apply-op[right=2]$op`:
 
 - Matches ApplyOp nodes with right operand 2 and whose parent is an Infix node.
 
@@ -288,7 +288,7 @@ Output:
 
 Explanation:
 
-- The query .call >> RakuAST::Var$var:
+- The query `.call >> RakuAST::Var$var`:
 
 - Matches call nodes that have a descendant Var node.
 
