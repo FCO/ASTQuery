@@ -51,7 +51,7 @@ method node-part:<name>($/)       { make (:name($<word>.made))                  
 #method node-part:<*>($/)          { '*'                                          }
 #method node-part:<par-simple>($/) { ':' <word>                                   }
 #method node-part:<par-arg>($/)    { ':' <word> '(' ~ ')' \d+                     }
-method node-part:<attr>($/)       { make (:atts(%=$<node-part-attr>.made))      }
+method node-part:<attr>($/)       { make (:atts(%=|$<node-part-attr>>>.made))      }
 
 method node-part-attr:<exists>($/)     { make ($<word>.made => Whatever)     }
 method node-part-attr:<a-value>($/)    { make ($<word>.made => $<str-or-list>.made) }

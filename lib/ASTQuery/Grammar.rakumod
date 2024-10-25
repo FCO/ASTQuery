@@ -34,7 +34,7 @@ multi token node-part:<name>       { '$' <word>                     }
 multi token node-part:<*>          { '*'                            }
 multi token node-part:<par-simple> { ':' <word>                     }
 multi token node-part:<par-arg>    { ':' <word> '(' ~ ')' \d+       }
-multi token node-part:<attr>       { '[' ~ ']' [ <node-part-attr> ] }
+multi token node-part:<attr>       { '[' ~ ']' [ <node-part-attr>+ %% [\s*","\s*] ] }
 
 proto token node-part-attr {*}
 multi token node-part-attr:<a-value>    { <word>  '=' <str-or-list> }
