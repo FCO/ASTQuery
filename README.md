@@ -2,7 +2,7 @@
 
 ASTQuery is a Raku module designed to simplify the process of querying and manipulating Raku’s Abstract Syntax Trees (RakuAST). It provides a powerful and flexible query language that allows developers to analyze, refactor, and understand Raku code at a deeper level.
 
-Synopsis
+## Synopsis
 
 ```raku
 use ASTQuery;
@@ -47,7 +47,7 @@ my $var_node = $result4<var>;
 say $var_node;  # Outputs the 'Var' node representing '$_'
 ```
 
-In these examples:
+### In these examples:
 
 - We parse some Raku code and generate its AST.
 
@@ -57,7 +57,7 @@ In these examples:
 
 - We retrieve the captured nodes using the <name> syntax.
 
-Key Features
+## Key Features
 
 - Flexible Query Syntax: Use a rich and expressive syntax to define queries, allowing precise selection of AST nodes.
 
@@ -75,13 +75,15 @@ Key Features
 
 - Code Analysis Modules: Potential to build modules that can detect common pitfalls or traps in Raku code.
 
-Query Language Syntax
+## Query Language Syntax
 
-Node Description Format
+### Node Description Format
 
 The format to describe a node in ASTQuery is:
 
+```
 RakuAST::Class::Name.group#id[attr1, attr2=attrvalue]$name
+```
 
 - RakuAST::Class::Name: (Optional) The full class name of the node.
 
@@ -95,7 +97,7 @@ RakuAST::Class::Name.group#id[attr1, attr2=attrvalue]$name
 
 Important Note: You should not use more than one name ($name) on a single node. Each node can have at most one named capture.
 
-Operators for Node Relationships
+### Operators for Node Relationships
 
 ASTQuery supports several operators to define relationships between nodes:
 
@@ -103,13 +105,13 @@ ASTQuery supports several operators to define relationships between nodes:
 
 - <: The right node is the parent of the left node.
 
-- >>: The left node has the right node as a descendant, but there are only nodes from the ignorable group between them.
+- <<: The left node has the right node as a descendant, but there are only nodes from the ignorable group between them.
 
 - <<: The right node is an ancestor of the left node, with only nodes from the ignorable group between them.
 
 - (space): The left node has the right node as a descendant.
 
-Ignorable Group
+### Ignorable Group
 
 The ignorable group includes nodes that can be skipped over when using the >> and << operators. By default, this group includes:
 
@@ -123,9 +125,9 @@ The ignorable group includes nodes that can be skipped over when using the >> an
 
 - RakuAST::ArgList
 
-Examples
+## Examples
 
-Example 1: Matching Specific Infix Operations
+### Example 1: Matching Specific Infix Operations
 
 ```raku
 # Sample Raku code
@@ -161,7 +163,7 @@ Explanation:
 
 - The query .apply-op[left=1, right=3] matches ApplyOp nodes with left operand 1 and right operand 3.
 
-Example 2: Using the Ancestor Operator << and Named Captures
+### Example 2: Using the Ancestor Operator << and Named Captures
 
 ```raku
 # Sample Raku code
@@ -209,7 +211,7 @@ Explanation:
 
 - We can access the captured nodes using $result<cond> and $result<int>.
 
-Example 3: Using the Parent Operator < and Capturing Nodes
+### Example 3: Using the Parent Operator < and Capturing Nodes
 
 ```raku
 # Sample Raku code
@@ -247,7 +249,7 @@ Explanation:
 
 - Captures the ApplyOp nodes as $op.
 
-Example 4: Using the Descendant Operator >> and Capturing Variables
+### Example 4: Using the Descendant Operator >> and Capturing Variables
 
 ```raku
 # Sample Raku code
@@ -294,7 +296,7 @@ Explanation:
 
 - We can access the captured Var node using $result<var>.
 
-Retrieving Matched Nodes
+## Retrieving Matched Nodes
 
 The ast-query function returns an ASTQuery object with:
 
@@ -302,7 +304,7 @@ The ast-query function returns an ASTQuery object with:
 
 - %.hash: A hash where keys are the names of captured nodes (defined with $), and values are the nodes that matched those captures.
 
-Accessing Captured Nodes
+## Accessing Captured Nodes
 
 ```raku
 # Perform the query
@@ -315,7 +317,7 @@ my $call_node = $result<call>;
 my @matched_nodes = $result.list;
 ```
 
-Operators and Their Meanings
+## Operators and Their Meanings
 
 - >: Left node has the right node as a child.
 
@@ -327,33 +329,11 @@ Operators and Their Meanings
 
 - (space): Left node has the right node as a descendant.
 
-More Operators
+### More Operators
 
 Additional operators are planned for future implementation, further enhancing the expressiveness of the query language.
 
-Custom Groups
-
-Note: Defining custom groups is a planned feature and is not yet implemented. In the future, users will be able to define custom groups to categorize nodes, enhancing query flexibility.
-
-The ast-query Function
-
-The ast-query function takes one argument:
-
-- Query String: A string defining the node pattern using the query syntax.
-
-It is called as a method on the AST:
-
-```raku
-my $result = $ast.&ast-query('query string');
-```
-
-It returns an ASTQuery object with:
-
-- @.list: All nodes that matched the query.
-
-- %.hash: Nodes captured with named captures (using the $ symbol).
-
-Potential Use Cases
+## Potential Use Cases
 
 - Refactoring Tools: Automatically find and replace patterns in code, such as deprecated function calls.
 
@@ -365,11 +345,11 @@ Potential Use Cases
 
 - Custom Transformations: Implement domain-specific language features or custom syntax by transforming AST nodes.
 
-Current Status and Future Directions
+## Current Status and Future Directions
 
 ASTQuery is currently in active development, focusing on refining the query syntax, implementing more operators, and expanding its capabilities.
 
-Future Plans
+## Future Plans
 
 - Implement More Operators: Enhance the query language with additional operators for more complex relationships.
 
@@ -383,11 +363,11 @@ Future Plans
 
 - Community Contributions: Encourage contributions to expand use cases, improve documentation, and enhance features.
 
-Get Involved
+## Get Involved
 
 Check out the ASTQuery repository on GitHub for code examples, the latest updates, and to contribute.
 
-How You Can Help
+### How You Can Help
 
 - Feedback: Share your thoughts on the query syntax, features, and usability.
 
@@ -399,7 +379,7 @@ How You Can Help
 
 Note: ASTQuery is a project by Fernando Corrêa de Oliveira, aimed at making AST manipulation in Raku more accessible and powerful.
 
-Conclusion
+## Conclusion
 
 ASTQuery offers a powerful and flexible way to query and manipulate Raku’s ASTs using an expressive syntax that allows precise specification of nodes and their relationships. By introducing operators, named captures, and a comprehensive query language, ASTQuery provides developers with the tools needed to effectively analyze and transform Raku code at the AST level.
 
