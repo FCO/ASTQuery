@@ -4,6 +4,7 @@ ASTQuery is a Raku module designed to simplify the process of querying and manip
 
 Synopsis
 
+```raku
 use ASTQuery;
 
 # Sample Raku code
@@ -44,6 +45,7 @@ say $result4.hash;  # Outputs the hash with the 'Var' node captured as 'var'
 # Access the captured 'Var' node
 my $var_node = $result4<var>;
 say $var_node;  # Outputs the 'Var' node representing '$_'
+```
 
 In these examples:
 
@@ -103,6 +105,7 @@ Examples
 
 Example 1: Matching Specific Infix Operations
 
+```raku
 # Sample Raku code
 my $code = q{
     for ^10 {
@@ -119,15 +122,18 @@ my $ast = $code.AST;
 my $result = $ast.&ast-query('.apply-op[left=1, right=3]');
 say $result.list;  # Outputs matching 'ApplyOp' nodes
 say $result.hash;  # Outputs an empty hash (no named captures)
+```
 
 Output:
 
+```raku
 [RakuAST::ApplyInfix.new(
   left  => RakuAST::IntLiteral.new(1),
   infix => RakuAST::Infix.new("*"),
   right => RakuAST::IntLiteral.new(3)
 )]
 {}
+```
 
 Explanation:
 
@@ -135,6 +141,7 @@ Explanation:
 
 Example 2: Using the Ancestor Operator << and Named Captures
 
+```raku
 # Sample Raku code
 my $code = q{
     for ^10 {
@@ -151,9 +158,11 @@ my $ast = $code.AST;
 my $result = $ast.&ast-query('RakuAST::Infix << .conditional$cond .int#2$int');
 say $result.list;  # Outputs matching 'Infix' nodes
 say $result.hash;  # Outputs captured nodes under 'cond' and 'int'
+```
 
 Output:
 
+```raku
 [RakuAST::Infix.new("%%") RakuAST::Infix.new("*")]
 {
   cond => RakuAST::Statement::If.new(
@@ -166,6 +175,7 @@ Output:
   ),
   int => [RakuAST::IntLiteral.new(2), RakuAST::IntLiteral.new(2)]
 }
+```
 
 Explanation:
 
@@ -176,6 +186,7 @@ Explanation:
 
 Example 3: Using the Parent Operator < and Capturing Nodes
 
+```raku
 # Sample Raku code
 my $code = q{
     for ^10 {
@@ -191,14 +202,17 @@ my $ast = $code.AST;
 # Query to find 'ApplyInfix' nodes where right=2 and capture them as '$op'
 my $result = $ast.&ast-query('RakuAST::Infix < .apply-op[right=2]$op');
 say $result<op>;  # Outputs the captured 'ApplyInfix' nodes
+```
 
 Output:
 
+```raku
 [RakuAST::ApplyInfix.new(
   left  => RakuAST::Var::Lexical.new("$_"),
   infix => RakuAST::Infix.new("*"),
   right => RakuAST::IntLiteral.new(2)
 )]
+```
 
 Explanation:
 
@@ -208,6 +222,7 @@ Explanation:
 
 Example 4: Using the Descendant Operator >> and Capturing Variables
 
+```raku
 # Sample Raku code
 my $code = q{
     for ^10 {
@@ -228,9 +243,11 @@ say $result.hash;  # Outputs the hash with the 'Var' node captured as 'var'
 # Access the captured 'Var' node
 my $var_node = $result<var>;
 say $var_node;  # Outputs the 'Var' node representing '$_'
+```
 
 Output:
 
+```raku
 [RakuAST::Call::Name::WithoutParentheses.new(
   name => RakuAST::Name.from-identifier("say"),
   args => RakuAST::ArgList.new(
@@ -238,6 +255,7 @@ Output:
   )
 )]
 { var => RakuAST::Var::Lexical.new("$_") }
+```
 
 Explanation:
 
@@ -255,6 +273,7 @@ The ast-query function returns an ASTQuery object with:
 
 Accessing Captured Nodes
 
+```raku
 # Perform the query
 my $result = $ast.&ast-query('.call#say$call');
 
@@ -263,6 +282,7 @@ my $call_node = $result<call>;
 
 # Access all matched nodes
 my @matched_nodes = $result.list;
+```
 
 Operators and Their Meanings
 
@@ -288,7 +308,9 @@ The ast-query function takes one argument:
 
 It is called as a method on the AST:
 
+```raku
 my $result = $ast.&ast-query('query string');
+```
 
 It returns an ASTQuery object with:
 
