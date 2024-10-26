@@ -4,15 +4,15 @@ use ASTQuery::Actions;
 use ASTQuery::Match;
 unit class ASTQuery;
 
-multi ast-query($ast, Str $selector) is export {
+sub ast-query($ast, Str $selector) is export {
 	my $match = ASTQuery::Match.new:
 		:$ast,
-		:matcher(ast-query $selector),
+		:matcher(ast-matcher $selector),
 	;
 	$match.query;
 }
 
-multi ast-query(Str $selector) is export {
+sub ast-matcher(Str $selector) is export {
 	ASTQuery::Grammar.parse($selector, :actions(ASTQuery::Actions)).made
 }
 
