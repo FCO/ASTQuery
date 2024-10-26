@@ -4,12 +4,16 @@ use ASTQuery::Actions;
 use ASTQuery::Match;
 unit class ASTQuery;
 
-sub ast-query($ast, Str $selector) is export {
+multi ast-query($ast, Str $selector) is export {
 	my $match = ASTQuery::Match.new:
 		:$ast,
-		:matcher(ASTQuery::Grammar.parse($selector, :actions(ASTQuery::Actions)).made),
+		:matcher(ast-query $selector),
 	;
 	$match.query;
+}
+
+multi ast-query(Str $selector) is export {
+	ASTQuery::Grammar.parse($selector, :actions(ASTQuery::Actions)).made
 }
 
 =begin pod

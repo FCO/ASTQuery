@@ -1,5 +1,8 @@
 use experimental :rakuast, :will-complain;
+use ASTQuery::Match;
 unit class ASTQuery::Matcher;
+
+my $DEBUG = False;
 
 my %groups is Map = (
 	call       => [RakuAST::Call],
@@ -100,115 +103,116 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	}"
 }
 
-method ACCEPTS($node) {
-	#say "ACCEPTS: ", self;
-	my %*values;
-	my $key = self.get-id-field: $node;
-	my $ans = so ($!class    ?? self.validate-class($node, ::($!class))                    !! True)
-		&& ($!group      ?? self.validate-class($node, |%groups{$!group})              !! True)
-		&& ($!id         ?? $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
-		&& (%!atts       ?? self.validate-atts($node, %!atts)                          !! True)
-		&& ($!child      ?? self.validate-child($node, $!child)                        !! True)
-		&& ($!descendant ?? self.validate-descendant($node, $!descendant)              !! True)
-		&& ($!gchild     ?? self.validate-gchild($node, $!gchild)                      !! True)
-		&& ($!parent     ?? self.validate-parent($node, $!parent)                      !! True)
-		&& ($!ascendant  ?? self.validate-ascendant($node, $!ascendant)                !! True)
-		# TODO: params
-	;
+multi add(@matches, ASTQuery::Match $match where *.so) {
+	@matches.push: $match;
+	$match
+}
+multi add(@, $ret) { $ret }
 
-	if $ans {
-		for %*values.kv -> $key, $value {
-			$*match.hash.push: $key => $value
+method ACCEPTS($node) {
+	my $match = ASTQuery::Match.new: :ast($node), :matcher(self);
+	{
+		say "ACCEPTS: ", self if $DEBUG;
+		my $key = self.get-id-field: $node;
+		my @matches;
+		my $ans = so ($!class    ?? @matches.&add: self.validate-class($node, ::($!class))                    !! True)
+			&& ($!group      ?? @matches.&add: self.validate-class($node, |%groups{$!group})              !! True)
+			&& ($!id         ?? @matches.&add: $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
+			&& (%!atts       ?? @matches.&add: self.validate-atts($node, %!atts)                          !! True)
+			&& ($!child      ?? @matches.&add: self.validate-child($node, $!child)                        !! True)
+			&& ($!descendant ?? @matches.&add: self.validate-descendant($node, $!descendant)              !! True)
+			&& ($!gchild     ?? @matches.&add: self.validate-gchild($node, $!gchild)                      !! True)
+			&& ($!parent     ?? @matches.&add: self.validate-parent($node, $!parent)                      !! True)
+			&& ($!ascendant  ?? @matches.&add: self.validate-ascendant($node, $!ascendant)                !! True)
+			# TODO: params
+		;
+
+		if $ans {
+			for @matches -> $m {
+				$match.list.append: $m.list;
+				for $m.hash.kv -> $key, $value {
+					$match.hash.push: $key => $value
+				}
+			}
 		}
+		say $node.^name, " - ", $match.list if $DEBUG;
 	}
-	return $ans
+	$match
 }
 
 method validate-ascendant($, $parent) {
-	[||] do for @*LINEAGE -> $ascendant {
-		my $parent-match = $*match.new(:ast($ascendant), :matcher($parent), :$*match);
-		my $resp = $parent-match.query-root-only;
-		do if $resp.list.elems {
-			if $resp.hash {
-				for $resp.hash.kv -> $key, $value {
-					%*values.push: $key => $value
-				}
-			}
-			True
-		}
+	say ::?CLASS.^name, " : validate-ascendant" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-ascendant ===> ", $_ !! True;
+	ASTQuery::Match.merge: |do for @*LINEAGE -> $ascendant {
+		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
+			.query-root-only;
 	}
 }
 
 method validate-parent($, $parent) {
-	my $parent-match = $*match.new(:ast(@*LINEAGE.head), :matcher($parent), :$*match);
-	my $resp = $parent-match.query-root-only;
-	if $resp.list.elems {
-		if $resp.hash {
-			for $resp.hash.kv -> $key, $value {
-				%*values.push: $key => $value
-			}
-		}
-		return True
-	}
+	say ::?CLASS.^name, " : validate-parent" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-parent ===> ", $_ !! True;
+	ASTQuery::Match.new(:ast(@*LINEAGE.head), :matcher($parent))
+		.query-root-only;
 }
 
 method validate-descendant($node, $child) {
-	my $descendant-match = $*match.new(:ast($node), :matcher($child), :$*match);
-	my $resp = $descendant-match.query-descendants-only;
-	if $resp.list.elems {
-		if $resp.hash {
-			for $resp.hash.kv -> $key, $value {
-				%*values.push: $key => $value
-			}
-		}
-		return True
-	}
+	say ::?CLASS.^name, " : validate-descendant" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-descendant ===> ", $_ !! True;
+	ASTQuery::Match.new(:ast($node), :matcher($child))
+		.query-descendants-only;
 }
 
 method validate-gchild($node, $gchild) {
+	say ::?CLASS.^name, " : validate-gchild" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-gchild ===> ", $_ !! True;
 	my $gchild-result = self.validate-child($node, $gchild);
-	return True if $gchild-result;
+	return $gchild-result if $gchild-result;
 
-	my @list = self.query-child($node, ::?CLASS.new: :group<ignorable>);
-	[||] do for @list -> $node {
+	my @list = self.query-child($node, ::?CLASS.new: :group<ignorable>).list;
+	ASTQuery::Match.merge: |do for @list -> $node {
 		self.validate-gchild: $node, $gchild
 	}
 }
 
 method query-child($node, $child, *%pars) {
-	my $child-match = $*match.new(:ast($node), :matcher($child), :$*match);
-	my $resp = $child-match.query-children-only;
-	if $resp.elems {
-		if $resp.hash {
-			%*values.push: $_ for $resp.hash.pairs
-		}
-	}
-	$resp.list
+	say ::?CLASS.^name, " : query-child" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : query-child ===> ", $_ !! True;
+	ASTQuery::Match.new(:ast($node), :matcher($child))
+		.query-children-only;
 }
 
 method validate-child($node, $child) {
-	self.query-child($node, $child).Bool
+	say ::?CLASS.^name, " : validate-child" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-child ===> ", $_ !! True;
+	self.query-child($node, $child)
 }
 
 method validate-class($node, **@classes) {
-	[False, |@classes].reduce: -> $ans, $class {
+	say ::?CLASS.^name, " : validate-class ($node.^name())" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-class ===> ", $_ !! True;
+	[False, |@classes].reduce(-> $ans, $class {
 		$ans || $node ~~ $class
-	};
+	}) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
 method validate-atts($node, %atts) {
-	[True, |%atts.pairs].reduce: -> $ans, (:$key, :$value) {
+	say ::?CLASS.^name, " : validate-atts" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-atts ===> ", $_ !! True;
+	[True, |%atts.pairs].reduce(-> $ans, (:$key, :$value) {
 		$ans && self.validate-value: $node, $key, $value
-	}
+	}) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
 method validate-value($node, $key, $value) {
+	say ::?CLASS.^name, " : validate-value" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-value ===> ", $_ !! True;
 	do if $node.^name.starts-with("RakuAST") && !$value.^name.starts-with: "RakuAST" {
 		return False unless $key;
 		return False unless $node.^can: $key;
 		my $nnode = $node."$key"();
 		self.validate-value: $nnode, $.get-id-field($nnode), $value
 	} else { 
-		$node ~~ $value
+		$node ~~ $value ?? ASTQuery::Match.new: :list[$node] !! False
 	}
 }
