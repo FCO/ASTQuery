@@ -30,7 +30,7 @@ for %(
 		meth  => "gchild",
 		value => ast-matcher("RakuAST::Node"),
 	),
-	"RakuAST::Node RakuAST::Node" => %(
+	"RakuAST::Node >>> RakuAST::Node" => %(
 		meth  => "descendant",
 		value => ast-matcher("RakuAST::Node"),
 	),
@@ -39,6 +39,10 @@ for %(
 		value => ast-matcher("RakuAST::Node"),
 	),
 	"RakuAST::Node << RakuAST::Node" => %(
+		meth  => "gparent",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	"RakuAST::Node <<< RakuAST::Node" => %(
 		meth  => "ascendant",
 		value => ast-matcher("RakuAST::Node"),
 	),
