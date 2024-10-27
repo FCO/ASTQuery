@@ -3,22 +3,27 @@
   "authors": [
     "Fernando Corrêa de Oliveira"
   ],
-  "build-depends": [],
-  "depends": [],
-  "description": "blah blah blah",
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "Query and manipulate Raku’s Abstract Syntax Trees (RakuAST) with an expressive syntax",
   "license": "Artistic-2.0",
   "name": "ASTQuery",
   "perl": "6.d",
   "provides": {
     "ASTQuery": "lib/ASTQuery.rakumod",
+    "ASTQuery::Actions": "lib/ASTQuery/Actions.rakumod",
     "ASTQuery::Grammar": "lib/ASTQuery/Grammar.rakumod",
     "ASTQuery::Match": "lib/ASTQuery/Match.rakumod",
-    "ASTQuery::Actions": "lib/ASTQuery/Actions.rakumod",
     "ASTQuery::Matcher": "lib/ASTQuery/Matcher.rakumod"
   },
-  "resources": [],
+  "resources": [
+  ],
   "source-url": "https://github.com/FCO/ASTQuery.git",
-  "tags": [],
-  "test-depends": [],
+  "tags": [
+  ],
+  "test-depends": [
+  ],
   "version": "0.0.1"
 }
