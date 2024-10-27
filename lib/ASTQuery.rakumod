@@ -4,12 +4,14 @@ use ASTQuery::Actions;
 use ASTQuery::Match;
 unit class ASTQuery;
 
-multi ast-query($ast, Str $selector) is export {
+proto ast-query($, $) is export {*}
+
+multi ast-query($ast, Str $selector) {
 	my $matcher = ast-matcher $selector;
 	ast-query $ast, $matcher
 }
 
-multi ast-query($ast, $matcher) is export {
+multi ast-query($ast, $matcher) {
 	my $match = ASTQuery::Match.new:
 		:$ast,
 		:$matcher,

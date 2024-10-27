@@ -9,6 +9,7 @@ my %groups is Map = (
 	expression => [RakuAST::Statement::Expression],
 	statement   => [RakuAST::Statement],
 	int         => [RakuAST::IntLiteral],
+	str         => [RakuAST::StrLiteral],
 	op          => [
 		RakuAST::Infixish,
 		RakuAST::Prefixish,
@@ -24,6 +25,12 @@ my %groups is Map = (
 	conditional => [
 		RakuAST::Statement::IfWith,
 		RakuAST::Statement::Unless,
+		RakuAST::Statement::Without,
+	],
+	iterable => [
+		RakuAST::Statement::Loop,
+		RakuAST::Statement::For,
+		RakuAST::Statement::Whenever,
 	],
 	ignorable => [
 		RakuAST::Block,
@@ -54,6 +61,8 @@ my %id is Map = (
 	"RakuAST::FunctionInfix"         => "function",
 	"RakuAST::ArgList"               => "args",
 	"RakuAST::Var::Lexical"          => "desigilname",
+	"RakuAST::Statement::For"        => "source",
+	"RakuAST::Statement::Loop"       => "condition",
 );
 
 method get-id-field($node) {
@@ -73,6 +82,7 @@ has %.params;
 has $.child is rw;
 has $.gchild is rw;
 has $.parent is rw;
+has $.gparent is rw;
 has $.descendant is rw;
 has $.ascendant is rw;
 has Str $.name;
@@ -95,9 +105,13 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	}{
 		" >> " ~ .gist(:inside) with $!gchild
 	}{
+		" >>> " ~ .gist(:inside) with $!descendant
+	}{
 		" < " ~ .gist(:inside) with $!parent
 	}{
-		" " ~ .gist(:inside) with $!descendant
+		" << " ~ .gist(:inside) with $!gparent
+	}{
+		" <<< " ~ .gist(:inside) with $!ascendant
 	}{
 		")" unless $inside
 	}"
@@ -146,6 +160,16 @@ method validate-ascendant($, $parent) {
 	ASTQuery::Match.merge: |do for @*LINEAGE -> $ascendant {
 		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
 			.query-root-only;
+	}
+}
+
+method validate-gparent($, $parent) {
+	my @ignorables = %groups<ignorable><>;
+	say ::?CLASS.^name, " : validate-gparent" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-gparent ===> ", $_ !! True;
+	ASTQuery::Match.merge: |do for @*LINEAGE -> $ascendant {
+		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
+			.query-root-only || $ascendant ~~ @ignorables.any || last
 	}
 }
 

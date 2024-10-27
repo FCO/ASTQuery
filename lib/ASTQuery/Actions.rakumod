@@ -26,6 +26,10 @@ method list:<ascend>($/)   {
 	make my $node = $<node>.made;
 	$node.ascendant = $<str-or-list>.made
 }
+method list:<gparent>($/)   {
+	make my $node = $<node>.made;
+	$node.gparent = $<str-or-list>.made
+}
 method list:<parent>($/)   {
 	make my $node = $<node>.made;
 	$node.parent = $<str-or-list>.made

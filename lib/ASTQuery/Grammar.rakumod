@@ -9,12 +9,13 @@ multi token str:<number> { \d+ }
 multi token str:<double> { '"' ~ '"' $<str>=<-["]>* }
 multi token str:<simple> { "'" ~ "'" $<str>=<-[']>* }
 
-proto token list          { *                 }
-multi token list:<descen> { <node>     \s+     <str-or-list> }
-multi token list:<gchild> { <node> \s* '>>' \s* <str-or-list> }
-multi token list:<child>  { <node> \s* '>' \s* <str-or-list> }
-multi token list:<ascend> { <node> \s* '<<' \s* <str-or-list> }
-multi token list:<parent> { <node> \s* '<' \s* <str-or-list> }
+proto token list           { *                                  }
+multi token list:<descen>  { <node> \s* '>>>' \s* <str-or-list> }
+multi token list:<gchild>  { <node> \s* '>>'  \s* <str-or-list> }
+multi token list:<child>   { <node> \s* '>'   \s* <str-or-list> }
+multi token list:<ascend>  { <node> \s* '<<<' \s* <str-or-list> }
+multi token list:<gparent> { <node> \s* '<<'  \s* <str-or-list> }
+multi token list:<parent>  { <node> \s* '<'   \s* <str-or-list> }
 #multi token list:<many>   { <node> \s* ',' \s* <str-or-list> }
 #multi token list:<after>  { <node> \s+ '+' \s* <str-or-list> }
 #multi token list:<before> { <node> \s* '~' \s* <str-or-list> }
