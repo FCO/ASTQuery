@@ -1,0 +1,135 @@
+use experimental :rakuast;
+use ASTQuery;
+use Test;
+
+ok &ast-matcher;
+ok &ast-query;
+
+for %(
+	"RakuAST::Node" => %(
+		meth  => "class",
+		value => "RakuAST::Node",
+	),
+	".conditional" => %(
+		meth  => "group",
+		value => "conditional",
+	),
+	"#blablabla" => %(
+		meth  => "id",
+		value => "blablabla",
+	),
+	"[attribute]" => %(
+		meth  => "atts",
+		value => %(attribute => Whatever),
+	),
+	"RakuAST::Node > RakuAST::Node" => %(
+		meth  => "child",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	"RakuAST::Node >> RakuAST::Node" => %(
+		meth  => "gchild",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	"RakuAST::Node RakuAST::Node" => %(
+		meth  => "descendant",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	"RakuAST::Node < RakuAST::Node" => %(
+		meth  => "parent",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	"RakuAST::Node << RakuAST::Node" => %(
+		meth  => "ascendant",
+		value => ast-matcher("RakuAST::Node"),
+	),
+	'$name' => %(
+		meth  => "name",
+		value => "name",
+	),
+).kv -> $selector, % (Str :$meth, :$value) {
+	my $matcher = ast-matcher($selector);
+	isa-ok $matcher, ASTQuery::Matcher;
+	is-deeply $matcher."$meth"(), $value;
+}
+
+for %(
+	Q|42| => %(
+		matcher => Q|RakuAST::IntLiteral|,
+		list    => [
+			RakuAST::IntLiteral.new(42)
+		],
+		hash    => %(),
+	),
+	Q|42, 13, 3| => %(
+		matcher => Q|RakuAST::IntLiteral|,
+		list    => [
+			RakuAST::IntLiteral.new(42),
+			RakuAST::IntLiteral.new(13),
+			RakuAST::IntLiteral.new(3),
+		],
+		hash    => %(),
+	),
+	Q|42, 13, 3| => %(
+		matcher => Q|.int|,
+		list    => [
+			RakuAST::IntLiteral.new(42),
+			RakuAST::IntLiteral.new(13),
+			RakuAST::IntLiteral.new(3),
+		],
+		hash    => %(),
+	),
+	Q|42, 13, 3| => %(
+		matcher => Q|#42|,
+		list    => [
+			RakuAST::IntLiteral.new(42),
+		],
+		hash    => %(),
+	),
+	Q|42, 13, 3| => %(
+		matcher => Q|[value=42]|,
+		list    => [
+			RakuAST::IntLiteral.new(42),
+		],
+		hash    => %(),
+	),
+	Q|42, 13, 3| => %(
+		matcher => Q|.int$test|,
+		list    => [
+			RakuAST::IntLiteral.new(42),
+			RakuAST::IntLiteral.new(13),
+			RakuAST::IntLiteral.new(3),
+		],
+		hash    => %(
+			:test[
+				RakuAST::IntLiteral.new(42),
+				RakuAST::IntLiteral.new(13),
+				RakuAST::IntLiteral.new(3),
+			]
+		),
+	),
+	Q|say 42| => %(
+		matcher => Q|.call >> .int$integer|,
+		list    => [
+			RakuAST::Call::Name::WithoutParentheses.new(
+				name => RakuAST::Name.from-identifier("say"),
+				args => RakuAST::ArgList.new(
+					RakuAST::IntLiteral.new(42),
+				)
+			)
+		],
+		hash    => %(
+			:integer( RakuAST::IntLiteral.new(42) )
+		),
+	),
+).kv -> Str $ast, % (Str :$matcher, :@list, :%hash) {
+	is-deeply ast-query($ast.AST, ast-matcher $matcher),
+		ASTQuery::Match.new(
+			:@list,
+			:%hash,
+			:matcher(ast-matcher $matcher),
+			:ast($ast.AST),
+		)
+	;
+}
+
+done-testing

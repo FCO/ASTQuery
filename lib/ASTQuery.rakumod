@@ -4,10 +4,15 @@ use ASTQuery::Actions;
 use ASTQuery::Match;
 unit class ASTQuery;
 
-sub ast-query($ast, Str $selector) is export {
+multi ast-query($ast, Str $selector) is export {
+	my $matcher = ast-matcher $selector;
+	ast-query $ast, $matcher
+}
+
+multi ast-query($ast, $matcher) is export {
 	my $match = ASTQuery::Match.new:
 		:$ast,
-		:matcher(ast-matcher $selector),
+		:$matcher,
 	;
 	$match.query;
 }
@@ -20,7 +25,7 @@ sub ast-matcher(Str $selector) is export {
 
 =head1 NAME
 
-ASTQuery - blah blah blah
+ASTQuery - Query RakuAST
 
 =head1 SYNOPSIS
 
