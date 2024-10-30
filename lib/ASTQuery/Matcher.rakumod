@@ -74,9 +74,9 @@ method get-id-field($node) {
 subset ASTClass of Str will complain {"$_ is not a valid class"} where { !.defined || ::(.Str) !~~ Failure }
 subset ASTGroup of Str will complain {"$_ is not a valid group"} where { !.defined || %groups{.Str} }
 
-has ASTClass $.class;
-has ASTGroup $.group;
-has $.id;
+has ASTClass() @.classes;
+has ASTGroup() @.groups;
+has @.ids;
 has %.atts;
 has %.params;
 has $.child is rw;
@@ -91,11 +91,11 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	"{
 		self.^name ~ ".new(" unless $inside
 	}{
-		.Str with $!class
+		(.Str for @!classes).join: ""
 	}{
-		'.' ~ .Str with $!group
+		('.' ~ .Str for @!groups).join: ""
 	}{
-		'#' ~ .Str with $!id
+		('#' ~ .Str for @!ids).join: ""
 	}{
 		"[" ~ %!atts.kv.map(-> $k, $v { $k ~ ( $v =:= Whatever ?? "" !! "=$v.gist()" ) }).join(', ') ~ ']' if %!atts
 	}{
@@ -127,17 +127,16 @@ method ACCEPTS($node) {
 	my $match = ASTQuery::Match.new: :ast($node), :matcher(self);
 	{
 		say "ACCEPTS: ", self if $DEBUG;
-		my $key = self.get-id-field: $node;
 		my @matches;
-		my $ans = so ($!class    ?? @matches.&add: self.validate-class($node, ::($!class))                    !! True)
-			&& ($!group      ?? @matches.&add: self.validate-class($node, |%groups{$!group})              !! True)
-			&& ($!id         ?? @matches.&add: $key.defined && self.validate-atts($node, %($key => $!id)) !! True)
-			&& (%!atts       ?? @matches.&add: self.validate-atts($node, %!atts)                          !! True)
-			&& ($!child      ?? @matches.&add: self.validate-child($node, $!child)                        !! True)
-			&& ($!descendant ?? @matches.&add: self.validate-descendant($node, $!descendant)              !! True)
-			&& ($!gchild     ?? @matches.&add: self.validate-gchild($node, $!gchild)                      !! True)
-			&& ($!parent     ?? @matches.&add: self.validate-parent($node, $!parent)                      !! True)
-			&& ($!ascendant  ?? @matches.&add: self.validate-ascendant($node, $!ascendant)                !! True)
+		my $ans = so (@!classes  ?? @matches.&add: self.validate-class($node, @!classes)               !! True)
+			&& (@!groups     ?? @matches.&add: self.validate-class($node, |%groups{@!groups}.flat) !! True)
+			&& (@!ids        ?? @matches.&add: self.validate-ids($node, @!ids)                     !! True)
+			&& (%!atts       ?? @matches.&add: self.validate-atts($node, %!atts)                   !! True)
+			&& ($!child      ?? @matches.&add: self.validate-child($node, $!child)                 !! True)
+			&& ($!descendant ?? @matches.&add: self.validate-descendant($node, $!descendant)       !! True)
+			&& ($!gchild     ?? @matches.&add: self.validate-gchild($node, $!gchild)               !! True)
+			&& ($!parent     ?? @matches.&add: self.validate-parent($node, $!parent)               !! True)
+			&& ($!ascendant  ?? @matches.&add: self.validate-ascendant($node, $!ascendant)         !! True)
 			# TODO: params
 		;
 
@@ -193,7 +192,7 @@ method validate-gchild($node, $gchild) {
 	my $gchild-result = self.validate-child($node, $gchild);
 	return $gchild-result if $gchild-result;
 
-	my @list = self.query-child($node, ::?CLASS.new: :group<ignorable>).list;
+	my @list = self.query-child($node, ::?CLASS.new: :groups<ignorable>).list;
 	ASTQuery::Match.merge: |do for @list -> $node {
 		self.validate-gchild: $node, $gchild
 	}
@@ -212,7 +211,11 @@ method validate-child($node, $child) {
 	self.query-child($node, $child)
 }
 
-method validate-class($node, **@classes) {
+multi method validate-class($node, @classes) {
+	self.validate-class: $node, |@classes.map: { ::($_) }
+}
+
+multi method validate-class($node, **@classes) {
 	say ::?CLASS.^name, " : validate-class ($node.^name())" if $DEBUG;
 	POST $DEBUG ?? say ::?CLASS.^name, " : validate-class ===> ", $_ !! True;
 	[False, |@classes].reduce(-> $ans, $class {
@@ -220,6 +223,13 @@ method validate-class($node, **@classes) {
 	}) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
+method validate-ids($node, @ids) {
+	my $key = self.get-id-field: $node;
+	return False unless $key;
+	[||] do for @ids -> $id {
+		self.validate-atts: $node, %($key => $id)
+	}
+}
 method validate-atts($node, %atts) {
 	say ::?CLASS.^name, " : validate-atts" if $DEBUG;
 	POST $DEBUG ?? say ::?CLASS.^name, " : validate-atts ===> ", $_ !! True;

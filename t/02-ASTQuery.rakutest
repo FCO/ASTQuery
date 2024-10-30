@@ -7,16 +7,16 @@ ok &ast-query;
 
 for %(
 	"RakuAST::Node" => %(
-		meth  => "class",
-		value => "RakuAST::Node",
+		meth  => "classes",
+		value => Array[ASTQuery::Matcher::ASTClass(Any)].new("RakuAST::Node"),
 	),
 	".conditional" => %(
-		meth  => "group",
-		value => "conditional",
+		meth  => "groups",
+		value => Array[ASTQuery::Matcher::ASTGroup(Any)].new("conditional"),
 	),
 	"#blablabla" => %(
-		meth  => "id",
-		value => "blablabla",
+		meth  => "ids",
+		value => ["blablabla", ],
 	),
 	"[attribute]" => %(
 		meth  => "atts",

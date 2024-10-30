@@ -43,14 +43,18 @@ method str-or-list:<str>($/)  { make $<str>.made  }
 method str-or-list:<list>($/) { make $<list>.made }
 
 method node($/) {
-	my %map := @<node-part>>>.made.Map;
-	make my $a = ASTQuery::Matcher.new: |%map;
+	my %map := @<node-part>>>.made.classify({ .key }, :as{.value});
+	%map<ids> := @=.flat with %map<ids>;
+	%map<atts> := %(|.map: { |.Map }) with %map<atts>;
+	%map<name> = .head with %map<name>;
+	#dd %map;
+	make my $a = ASTQuery::Matcher.new: |%map.Map;
 	#dd $a;
 }
 
-method node-part:<node>($/)       { make (:class($<ns>.made))                    }
-method node-part:<class>($/)      { make (:group($<word>.made))                  }
-method node-part:<id>($/)         { make (:id($<word>.made))                     }
+method node-part:<node>($/)       { make (:classes($<ns>.made))                  }
+method node-part:<class>($/)      { make (:groups($<word>.made))                 }
+method node-part:<id>($/)         { make (:ids($<word>.made))                    }
 method node-part:<name>($/)       { make (:name($<word>.made))                   }
 #method node-part:<*>($/)          { '*'                                          }
 #method node-part:<par-simple>($/) { ':' <word>                                   }
