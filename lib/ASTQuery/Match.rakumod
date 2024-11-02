@@ -21,13 +21,15 @@ method merge(*@matches) {
 method of {RakuAST::Node}
 
 method gist {
-	"ASTQuery::Match => " ~ $!matcher.gist
+	self.raku
 }
 
 sub match($match, $ast, $matcher) {
 	if $matcher.ACCEPTS: $ast -> $m {
-		for $m.hash.kv -> $key, $value {
-			$match.hash.push: $key => $value
+		if $m ~~ ::?CLASS {
+			for $m.hash.kv -> $key, $value {
+				$match.hash.push: $key => $value
+			}
 		}
 		$match.list.push: $ast;
 		$match.hash.push: $matcher.name => $ast if $matcher.?name;

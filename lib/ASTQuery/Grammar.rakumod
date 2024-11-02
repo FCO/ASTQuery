@@ -1,5 +1,7 @@
 #use Grammar::Tracer;
-unit grammar ASTQuery::Grammar; token TOP { <list> }
+unit grammar ASTQuery::Grammar;
+
+token TOP { <str-or-list> }
 
 token word { <-[\s#.\[\]=$>,~+]>+ }
 token ns { <[\w:-]>+ }
@@ -27,17 +29,20 @@ multi token str-or-list:<list> {<list>}
 
 token node { <node-part>+ }
 
-proto token node-part              { *                              }
-multi token node-part:<node>       { <ns>                           }
-multi token node-part:<class>      { '.' <word>                     }
-multi token node-part:<id>         { '#' <word>                     }
-multi token node-part:<name>       { '$' <word>                     }
-multi token node-part:<*>          { '*'                            }
-multi token node-part:<par-simple> { ':' <word>                     }
-multi token node-part:<par-arg>    { ':' <word> '(' ~ ')' \d+       }
+proto token node-part              { *                                              }
+multi token node-part:<node>       { <ns>                                           }
+multi token node-part:<class>      { '.' <word>                                     }
+multi token node-part:<id>         { '#' <word>                                     }
+multi token node-part:<name>       { '$' <word>                                     }
+multi token node-part:<*>          { '*'                                            }
+multi token node-part:<par-simple> { ':' <word>                                     }
+multi token node-part:<par-arg>    { ':' <word> '(' ~ ')' \d+                       }
 multi token node-part:<attr>       { '[' ~ ']' [ <node-part-attr>+ %% [\s*","\s*] ] }
+multi token node-part:<code>       { <code>                                         }
 
+token code { '{' ~ '}' $<code>=.*? }
 proto token node-part-attr {*}
+multi token node-part-attr:<block>      { <word>  '=' <code> }
 multi token node-part-attr:<a-value>    { <word>  '=' <str-or-list> }
 multi token node-part-attr:<a-contains> { <word> '~=' <str-or-list> }
 multi token node-part-attr:<a-starts>   { <word> '^=' <str-or-list> }

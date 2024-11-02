@@ -1,7 +1,7 @@
 use ASTQuery::Matcher;
 unit grammar ASTQuery::Actions;
 
-method TOP($/) { make $<list>.made }
+method TOP($/) { make $<str-or-list>.made }
 
 method word($/) { make $/.Str }
 method ns($/)   { make $/.Str }
@@ -47,6 +47,7 @@ method node($/) {
 	%map<ids> := @=.flat with %map<ids>;
 	%map<atts> := %(|.map: { |.Map }) with %map<atts>;
 	%map<name> = .head with %map<name>;
+	%map<code> := @=.flat with %map<code>;
 	#dd %map;
 	make my $a = ASTQuery::Matcher.new: |%map.Map;
 	#dd $a;
@@ -60,8 +61,12 @@ method node-part:<name>($/)       { make (:name($<word>.made))                  
 #method node-part:<par-simple>($/) { ':' <word>                                   }
 #method node-part:<par-arg>($/)    { ':' <word> '(' ~ ')' \d+                     }
 method node-part:<attr>($/)       { make (:atts(%=|$<node-part-attr>>>.made))    }
+method node-part:<code>($/)       { make (:code($<code>.made))                   }
+
+method code($/) { my $code = Q|sub ($_?, :match($/)) { | ~ $<code>.Str ~ Q| }|; make $code.AST.EVAL }
 
 method node-part-attr:<exists>($/)     { make ($<word>.made => Whatever)     }
+method node-part-attr:<block>($/)      { make ($<word>.made => $<code>.made) }
 method node-part-attr:<a-value>($/)    { make ($<word>.made => $<str-or-list>.made) }
 #method node-part-attr:<a-contains>($/) { '[' ~ ']' [ <word> '~=' [ <str> | <list> ] ] }
 #method node-part-attr:<a-starts>($/)   { '[' ~ ']' [ <word> '^=' [ <str> | <list> ] ] }

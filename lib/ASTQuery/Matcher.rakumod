@@ -2,7 +2,7 @@ use experimental :rakuast, :will-complain;
 use ASTQuery::Match;
 unit class ASTQuery::Matcher;
 
-my $DEBUG = False;
+my $DEBUG = %*ENV<ASTQUERY_DEBUG>;
 
 my %groups is Map = (
 	call       => [RakuAST::Call],
@@ -39,30 +39,45 @@ my %groups is Map = (
 		RakuAST::Statement::Expression,
 		RakuAST::ArgList,
 	],
+	node => [
+		RakuAST::Node,
+	],
+	var => [
+		RakuAST::VarDeclaration,
+		RakuAST::Var,
+	],
+	var-usage => [
+		RakuAST::Var,
+	],
+	var-declaration => [
+		RakuAST::VarDeclaration,
+		RakuAST::VarDeclaration::Simple,
+	],
 );
 
 my %id is Map = (
-	"RakuAST::Call"                  => "name",
-	"RakuAST::Statement::Expression" => "expression",
-	"RakuAST::Statement::IfWith"     => "condition",
-	"RakuAST::Statement::Unless"     => "condition",
-	"RakuAST::Literal"               => "value",
-	"RakuAST::Name"                  => "simple-identifier",
-	"RakuAST::Term::Name"            => "name",
-	"RakuAST::ApplyInfix"            => "infix",
-	"RakuAST::Infixish"              => "infix",
-	"RakuAST::Infix"                 => "operator",
-	"RakuAST::Prefix"                => "operator",
-	"RakuAST::Postfix"               => "operator",
-	"RakuAST::ApplyInfix"            => "infix",
-	"RakuAST::ApplyListInfix"        => "infix",
-	"RakuAST::ApplyDottyInfix"       => "infix",
-	"RakuAST::ApplyPostfix"          => "postfix",
-	"RakuAST::FunctionInfix"         => "function",
-	"RakuAST::ArgList"               => "args",
-	"RakuAST::Var::Lexical"          => "desigilname",
-	"RakuAST::Statement::For"        => "source",
-	"RakuAST::Statement::Loop"       => "condition",
+	"RakuAST::Call"                   => "name",
+	"RakuAST::Statement::Expression"  => "expression",
+	"RakuAST::Statement::IfWith"      => "condition",
+	"RakuAST::Statement::Unless"      => "condition",
+	"RakuAST::Literal"                => "value",
+	"RakuAST::Name"                   => "simple-identifier",
+	"RakuAST::Term::Name"             => "name",
+	"RakuAST::ApplyInfix"             => "infix",
+	"RakuAST::Infixish"               => "infix",
+	"RakuAST::Infix"                  => "operator",
+	"RakuAST::Prefix"                 => "operator",
+	"RakuAST::Postfix"                => "operator",
+	"RakuAST::ApplyInfix"             => "infix",
+	"RakuAST::ApplyListInfix"         => "infix",
+	"RakuAST::ApplyDottyInfix"        => "infix",
+	"RakuAST::ApplyPostfix"           => "postfix",
+	"RakuAST::FunctionInfix"          => "function",
+	"RakuAST::ArgList"                => "args",
+	"RakuAST::Var::Lexical"           => "desigilname",
+	"RakuAST::Statement::For"         => "source",
+	"RakuAST::Statement::Loop"        => "condition",
+	"RakuAST::VarDeclaration"         => "name",
 );
 
 method get-id-field($node) {
@@ -86,6 +101,7 @@ has $.gparent is rw;
 has $.descendant is rw;
 has $.ascendant is rw;
 has Str $.name;
+has Callable() @.code;
 
 multi method gist(::?CLASS:D: :$inside = False) {
 	"{
@@ -98,6 +114,8 @@ multi method gist(::?CLASS:D: :$inside = False) {
 		('#' ~ .Str for @!ids).join: ""
 	}{
 		"[" ~ %!atts.kv.map(-> $k, $v { $k ~ ( $v =:= Whatever ?? "" !! "=$v.gist()" ) }).join(', ') ~ ']' if %!atts
+	}{
+		("\{{$_}}" for @!code).join: ""
 	}{
 		'$' ~ .Str with $!name
 	}{
@@ -117,40 +135,58 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	}"
 }
 
-multi add(@matches, ASTQuery::Match $match where *.so) {
-	@matches.push: $match;
+multi add(ASTQuery::Match $base, $matcher, $node, ASTQuery::Match $match where *.so) {
+	$base.list.push: |$match.list;
+	for $match.hash.kv -> $key, $value {
+		$base.hash.push: $key => $value
+	}
 	$match
 }
-multi add(@, $ret) { $ret }
+multi add($, $, $, $ret) { $ret }
 
 method ACCEPTS($node) {
+	say "ACCEPTS: ", self, " -> ", $node.^name if $DEBUG;
+	POST $DEBUG ?? say "ACCEPTS: ", self, " -> ", $node.^name, ": ", $_ !! True;
 	my $match = ASTQuery::Match.new: :ast($node), :matcher(self);
 	{
-		say "ACCEPTS: ", self if $DEBUG;
-		my @matches;
-		my $ans = so (@!classes  ?? @matches.&add: self.validate-class($node, @!classes)               !! True)
-			&& (@!groups     ?? @matches.&add: self.validate-class($node, |%groups{@!groups}.flat) !! True)
-			&& (@!ids        ?? @matches.&add: self.validate-ids($node, @!ids)                     !! True)
-			&& (%!atts       ?? @matches.&add: self.validate-atts($node, %!atts)                   !! True)
-			&& ($!child      ?? @matches.&add: self.validate-child($node, $!child)                 !! True)
-			&& ($!descendant ?? @matches.&add: self.validate-descendant($node, $!descendant)       !! True)
-			&& ($!gchild     ?? @matches.&add: self.validate-gchild($node, $!gchild)               !! True)
-			&& ($!parent     ?? @matches.&add: self.validate-parent($node, $!parent)               !! True)
-			&& ($!ascendant  ?? @matches.&add: self.validate-ascendant($node, $!ascendant)         !! True)
-			# TODO: params
-		;
-
-		if $ans {
-			for @matches -> $m {
-				$match.list.append: $m.list;
-				for $m.hash.kv -> $key, $value {
-					$match.hash.push: $key => $value
-				}
-			}
+		my UInt $count = 0;
+		my $ans = [
+			True,
+			{:attr<child>,      :validator<validate-child>     },
+			{:attr<descendant>, :validator<validate-descendant>},
+			{:attr<gchild>,     :validator<validate-gchild>    },
+			{:attr<parent>,     :validator<validate-parent>    },
+			{:attr<ascendant>,  :validator<validate-ascendant> },
+			{:attr<classes>,    :validator<validate-class>     },
+			{:attr<groups>,     :validator<validate-groups>    },
+			{:attr<ids>,        :validator<validate-ids>       },
+			{:attr<atts>,       :validator<validate-atts>      },
+			{:attr<code>,       :validator<validate-code>      },
+		].reduce: sub (Bool() $ans, % (Str :$attr, Str :$validator)) {
+			return False unless $ans;
+			return True  unless self."$attr"();
+			++$count;
+			my $validated = self."$validator"($node, self."$attr"());
+			$match.&add: self, $node, $validated;
 		}
+		return False unless $ans;
+		#$match.hash.push: $!name => $node if $!name;
 		say $node.^name, " - ", $match.list if $DEBUG;
 	}
 	$match
+}
+
+multi method validate-code($node, @code) {
+	say ::?CLASS.^name, " : validate-code(@)" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-code(@) ===> ", $_ !! True;
+	([&&] do for @code -> &code {
+		self.validate-code: $node, &code;
+	}) ?? ASTQuery::Match.new: :list[$node] !! False
+}
+
+multi method validate-code($node, &code) {
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-code(\$) ===> ", $_ !! True;
+	code($node) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
 method validate-ascendant($, $parent) {
@@ -211,7 +247,15 @@ method validate-child($node, $child) {
 	self.query-child($node, $child)
 }
 
+multi method validate-groups($node, @groups) {
+	say ::?CLASS.^name, " : validate-groups ($node.^name())" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-groups ===> ", $_ !! True;
+	self.validate-class: $node, |%groups{@groups}.flat 
+}
+
 multi method validate-class($node, @classes) {
+	say ::?CLASS.^name, " : validate-class ($node.^name())" if $DEBUG;
+	POST $DEBUG ?? say ::?CLASS.^name, " : validate-class ===> ", $_ !! True;
 	self.validate-class: $node, |@classes.map: { ::($_) }
 }
 
@@ -231,22 +275,30 @@ method validate-ids($node, @ids) {
 	}
 }
 method validate-atts($node, %atts) {
-	say ::?CLASS.^name, " : validate-atts" if $DEBUG;
+	say ::?CLASS.^name, " : validate-atts: %atts.gist()" if $DEBUG;
 	POST $DEBUG ?? say ::?CLASS.^name, " : validate-atts ===> ", $_ !! True;
-	[True, |%atts.pairs].reduce(-> $ans, (:$key, :$value) {
-		$ans && self.validate-value: $node, $key, $value
-	}) ?? ASTQuery::Match.new: :list[$node] !! False
+	[True, |%atts.pairs].reduce(-> $ans, (:$key, :$value is copy) {
+		return False unless $ans;
+		$value = $value.($node) if $value ~~ Callable;
+		my $match = self.validate-value: $node, $key, $value;
+		if $ans	&& $ans ~~ ASTQuery::Match {
+			for $ans.hash.kv -> $key, $value {
+				$match.hash.push: $key => $value
+			}
+		}
+		$match
+	})
 }
 
 method validate-value($node, $key, $value) {
-	say ::?CLASS.^name, " : validate-value" if $DEBUG;
+	say ::?CLASS.^name, " : validate-value: ", $node if $DEBUG;
 	POST $DEBUG ?? say ::?CLASS.^name, " : validate-value ===> ", $_ !! True;
-	do if $node.^name.starts-with("RakuAST") && !$value.^name.starts-with: "RakuAST" {
+	do if $node.^name.starts-with("RakuAST") && $value !~~ ::?CLASS {
 		return False unless $key;
 		return False unless $node.^can: $key;
 		my $nnode = $node."$key"();
 		self.validate-value: $nnode, $.get-id-field($nnode), $value
 	} else { 
-		$node ~~ $value ?? ASTQuery::Match.new: :list[$node] !! False
+		$value.ACCEPTS: $node;
 	}
 }
