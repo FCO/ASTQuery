@@ -146,6 +146,11 @@ multi add($, $, $, $ret) { $ret }
 
 my $indent = 0;
 
+sub prepare-type($value) {
+	my $name = $value.^name;
+	$name.subst: /(\w)\w+'::'/, {"$0::"}, :g
+}
+
 multi prepare-bool(Bool() $result where *.so) {
 	"\o33[32;1mTrue\o33[m"
 }
@@ -157,7 +162,7 @@ multi prepare-bool(Bool() $result where	*.not) {
 multi prepare-bool(Mu) {"???"}
 
 sub prepare-node($node) {
-	"\o33[33;1m{ $node.^name.subst(/^.+"::"/, "") }\o33[m"
+	"\o33[33;1m{ $node.&prepare-type }\o33[m"
 }
 
 my @current-caller;
@@ -186,13 +191,30 @@ sub prepare-indent($indent, :$end) {
 	}\o33[m"
 }
 
-sub prepare-code($node) {
-	"\o33[1m{ $node.DEPARSE.trans: "\n" => "␤", "\t" => "␉" }\o33[m"
+multi prepare-code(RakuAST::Node $node) {
+	"\o33[1m{
+		my $txt = $node
+			.DEPARSE
+			.trans(["\n", "\t"] => ["␤", "␉"])
+			.subst(/\s+/, " ", :g)
+		;
+
+		$txt.chars > 22
+			?? $txt.substr(0, 22) ~ "\o33[30;1m...\o33[m"
+			!! $txt
+	}\o33[m"
+}
+
+multi prepare-code($node) {
+	"\o33[31;1m(NOT RakuAST)\o33[m \o33[1m{
+		$node
+			.trans(["\n", "\t"] => ["␤", "␉"])
+	}\o33[m"
 }
 
 sub print-validator-begin($node, $value) {
 	return unless $DEBUG;
-	say $indent.&prepare-indent, $node.&prepare-code, " (", $node.&prepare-node, ") - ", prepare-caller, ": ", $value;
+	note $indent.&prepare-indent, $node.&prepare-code, " (", $node.&prepare-node, ") - ", prepare-caller, ": ", $value;
 	$indent++;
 }
 
@@ -202,7 +224,7 @@ multi print-validator-end($, Mu, Mu $result) {
 
 multi print-validator-end($node, $value, $result) {
 	return True unless $DEBUG;
-	say $indent.&prepare-indent(:end), prepare-caller(:result($result)), " ({ $result.&prepare-bool })";
+	note $indent.&prepare-indent(:end), prepare-caller(:result($result)), " ({ $result.&prepare-bool })";
 	$indent--;
 	True
 }
@@ -266,8 +288,6 @@ method validate-gparent($node, $parent) {
 	print-validator-begin $node, $parent;
 	POST print-validator-end $node, $parent, $_;
 	my @ignorables = %groups<ignorable><>;
-	say ::?CLASS.^name, " : validate-gparent" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-gparent ===> ", $_ !! True;
 	ASTQuery::Match.merge-or: |do for @*LINEAGE -> $ascendant {
 		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
 			.query-root-only || $ascendant ~~ @ignorables.any || last
