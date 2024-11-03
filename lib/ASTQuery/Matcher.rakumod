@@ -89,6 +89,29 @@ method get-id-field($node) {
 subset ASTClass of Str will complain {"$_ is not a valid class"} where { !.defined || ::(.Str) !~~ Failure }
 subset ASTGroup of Str will complain {"$_ is not a valid group"} where { !.defined || %groups{.Str} }
 
+multi method add-ast-group(Str $name, ASTClass() @classes) {
+	self.add-ast-group: $name, @=@classes.map: { ::($_) }
+}
+
+multi method add-ast-group(Str $name, @classes) {
+	%groups := {%groups, $name => @classes}.Map
+}
+
+multi method set-ast-id(ASTClass:D $class, Str $id where {::($class).^can($_) || fail "$class has no method $id"}) {
+	%id := { %id, $class => $id }.Map
+}
+
+multi method set-ast-id(Mu:U $class, Str $id) {
+	self.set-ast-id: $class.^name, $id
+}
+
+multi method add-to-ast-group(ASTGroup $name, *@classes) {
+	my @new-classes = @classes.duckmap: -> ASTClass:D $class { ::($class) };
+	@new-classes.unshift: |%groups{$name};
+	say @new-classes;
+	self.add-ast-group: $name, @new-classes
+}
+
 has ASTClass() @.classes;
 has ASTGroup() @.groups;
 has @.ids;

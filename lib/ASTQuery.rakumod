@@ -1,6 +1,6 @@
-use experimental :rakuast;
 use ASTQuery::Grammar;
 use ASTQuery::Actions;
+use ASTQuery::Matcher;
 use ASTQuery::Match;
 unit class ASTQuery;
 
@@ -22,6 +22,10 @@ multi ast-query($ast, $matcher) {
 sub ast-matcher(Str $selector) is export {
 	ASTQuery::Grammar.parse($selector, :actions(ASTQuery::Actions)).made
 }
+
+sub add-ast-group(|c) is export {ASTQuery::Matcher.add-ast-group: |c}
+sub add-to-ast-group(|c) is export {ASTQuery::Matcher.add-to-ast-group: |c}
+sub set-ast-id(|c) is export {ASTQuery::Matcher.set-ast-id: |c}
 
 =begin pod
 
