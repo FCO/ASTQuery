@@ -144,24 +144,87 @@ multi add(ASTQuery::Match $base, $matcher, $node, ASTQuery::Match $match where *
 }
 multi add($, $, $, $ret) { $ret }
 
+my $indent = 0;
+
+multi prepare-bool(Bool() $result where *.so) {
+	"\o33[32;1mTrue\o33[m"
+}
+
+multi prepare-bool(Bool() $result where	*.not) {
+	"\o33[31;1mFalse\o33[m"
+}
+
+multi prepare-bool(Mu) {"???"}
+
+sub prepare-node($node) {
+	"\o33[33;1m{ $node.^name.subst(/^.+"::"/, "") }\o33[m"
+}
+
+my @current-caller;
+sub prepare-caller(Bool() :$result) {
+	"{
+		!$result.defined
+			?? "\o33[1m"
+			!! $result
+				?? "\o33[32;1m"
+				!! "\o33[31;1m"
+	}{
+		do if callframe(4).code.name -> $name {
+			@current-caller.push: $name;
+			"{$name}({callframe(6).code.signature.params.grep(!*.named).skip>>.gist.join: ", "})"
+		} else {
+			@current-caller.pop
+		}
+	}\o33[m"
+}
+
+sub prepare-indent($indent, :$end) {
+	"\o33[1;30m{
+		$indent == 0
+			?? ""
+			!! join "", "│  " x $indent - 1, $end ?? "└─ " !! "├─ "
+	}\o33[m"
+}
+
+sub prepare-code($node) {
+	"\o33[1m{ $node.DEPARSE.trans: "\n" => "␤", "\t" => "␉" }\o33[m"
+}
+
+sub print-validator-begin($node, $value) {
+	return unless $DEBUG;
+	say $indent.&prepare-indent, $node.&prepare-code, " (", $node.&prepare-node, ") - ", prepare-caller, ": ", $value;
+	$indent++;
+}
+
+multi print-validator-end($, Mu, Mu $result) {
+	True
+}
+
+multi print-validator-end($node, $value, $result) {
+	return True unless $DEBUG;
+	say $indent.&prepare-indent(:end), prepare-caller(:result($result)), " ({ $result.&prepare-bool })";
+	$indent--;
+	True
+}
+
 method ACCEPTS($node) {
-	say "ACCEPTS: ", self, " -> ", $node.^name if $DEBUG;
-	POST $DEBUG ?? say "ACCEPTS: ", self, " -> ", $node.^name, ": ", $_ !! True;
+	print-validator-begin $node, self.gist;
+	POST print-validator-end $node, self.gist, $_;
 	my $match = ASTQuery::Match.new: :ast($node), :matcher(self);
 	{
 		my UInt $count = 0;
 		my $ans = [
 			True,
-			{:attr<child>,      :validator<validate-child>     },
-			{:attr<descendant>, :validator<validate-descendant>},
-			{:attr<gchild>,     :validator<validate-gchild>    },
-			{:attr<parent>,     :validator<validate-parent>    },
-			{:attr<ascendant>,  :validator<validate-ascendant> },
 			{:attr<classes>,    :validator<validate-class>     },
 			{:attr<groups>,     :validator<validate-groups>    },
 			{:attr<ids>,        :validator<validate-ids>       },
 			{:attr<atts>,       :validator<validate-atts>      },
 			{:attr<code>,       :validator<validate-code>      },
+			{:attr<child>,      :validator<validate-child>     },
+			{:attr<descendant>, :validator<validate-descendant>},
+			{:attr<gchild>,     :validator<validate-gchild>    },
+			{:attr<parent>,     :validator<validate-parent>    },
+			{:attr<ascendant>,  :validator<validate-ascendant> },
 		].reduce: sub (Bool() $ans, % (Str :$attr, Str :$validator)) {
 			return False unless $ans;
 			return True  unless self."$attr"();
@@ -171,103 +234,121 @@ method ACCEPTS($node) {
 		}
 		return False unless $ans;
 		#$match.hash.push: $!name => $node if $!name;
-		say $node.^name, " - ", $match.list if $DEBUG;
+		#say $node.^name, " - ", $match.list if $DEBUG;
 	}
 	$match
 }
 
 multi method validate-code($node, @code) {
-	say ::?CLASS.^name, " : validate-code(@)" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-code(@) ===> ", $_ !! True;
+	print-validator-begin $node, @code;
+	POST print-validator-end $node, @code, $_;
 	([&&] do for @code -> &code {
 		self.validate-code: $node, &code;
 	}) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
 multi method validate-code($node, &code) {
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-code(\$) ===> ", $_ !! True;
+	print-validator-begin $node, &code;
+	POST print-validator-end $node, &code, $_;
 	code($node) ?? ASTQuery::Match.new: :list[$node] !! False
 }
 
-method validate-ascendant($, $parent) {
-	say ::?CLASS.^name, " : validate-ascendant" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-ascendant ===> ", $_ !! True;
-	ASTQuery::Match.merge: |do for @*LINEAGE -> $ascendant {
+method validate-ascendant($node, $parent) {
+	print-validator-begin $node, $parent;
+	POST print-validator-end $node, $parent, $_;
+	ASTQuery::Match.merge-or: |do for @*LINEAGE -> $ascendant {
 		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
 			.query-root-only;
 	}
 }
 
-method validate-gparent($, $parent) {
+method validate-gparent($node, $parent) {
+	print-validator-begin $node, $parent;
+	POST print-validator-end $node, $parent, $_;
 	my @ignorables = %groups<ignorable><>;
 	say ::?CLASS.^name, " : validate-gparent" if $DEBUG;
 	POST $DEBUG ?? say ::?CLASS.^name, " : validate-gparent ===> ", $_ !! True;
-	ASTQuery::Match.merge: |do for @*LINEAGE -> $ascendant {
+	ASTQuery::Match.merge-or: |do for @*LINEAGE -> $ascendant {
 		ASTQuery::Match.new(:ast($ascendant), :matcher($parent))
 			.query-root-only || $ascendant ~~ @ignorables.any || last
 	}
 }
 
-method validate-parent($, $parent) {
-	say ::?CLASS.^name, " : validate-parent" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-parent ===> ", $_ !! True;
+method validate-parent($node, $parent) {
+	print-validator-begin $node, $parent;
+	POST print-validator-end $node, $parent, $_;
 	ASTQuery::Match.new(:ast(@*LINEAGE.head), :matcher($parent))
 		.query-root-only;
 }
 
 method validate-descendant($node, $child) {
-	say ::?CLASS.^name, " : validate-descendant" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-descendant ===> ", $_ !! True;
+	print-validator-begin $node, $child;
+	POST print-validator-end $node, $child, $_;
 	ASTQuery::Match.new(:ast($node), :matcher($child))
 		.query-descendants-only;
 }
 
 method validate-gchild($node, $gchild) {
-	say ::?CLASS.^name, " : validate-gchild" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-gchild ===> ", $_ !! True;
+	print-validator-begin $node, $gchild;
+	POST print-validator-end $node, $gchild, $_;
 	my $gchild-result = self.validate-child($node, $gchild);
 	return $gchild-result if $gchild-result;
 
 	my @list = self.query-child($node, ::?CLASS.new: :groups<ignorable>).list;
-	ASTQuery::Match.merge: |do for @list -> $node {
+	ASTQuery::Match.merge-or: |do for @list -> $node {
 		self.validate-gchild: $node, $gchild
 	}
 }
 
 method query-child($node, $child, *%pars) {
-	say ::?CLASS.^name, " : query-child" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : query-child ===> ", $_ !! True;
+	print-validator-begin $node, $child;
+	POST print-validator-end $node, $child, $_;
 	ASTQuery::Match.new(:ast($node), :matcher($child))
 		.query-children-only;
 }
 
 method validate-child($node, $child) {
-	say ::?CLASS.^name, " : validate-child" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-child ===> ", $_ !! True;
+	print-validator-begin $node, $child;
+	POST print-validator-end $node, $child, $_;
 	self.query-child($node, $child)
 }
 
-multi method validate-groups($node, @groups) {
-	say ::?CLASS.^name, " : validate-groups ($node.^name())" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-groups ===> ", $_ !! True;
-	self.validate-class: $node, |%groups{@groups}.flat 
+method validate-groups($node, @groups) {
+	print-validator-begin $node, @groups;
+	POST print-validator-end $node, @groups, $_;
+	self.validate-class: $node, %groups{@groups}.flat 
+}
+
+multi method validate-class($node, Str $class) {
+	print-validator-begin $node, $class;
+	POST print-validator-end $node, $class, $_;
+	self.validate-class: $node, ::($class)
+}
+
+multi method validate-class($node, Mu:U $class) {
+	print-validator-begin $node, $class;
+	POST print-validator-end $node, $class, $_;
+	do if $node ~~ $class {
+		ASTQuery::Match.new: :list[$node]
+	} else {
+		False
+	}
 }
 
 multi method validate-class($node, @classes) {
-	say ::?CLASS.^name, " : validate-class ($node.^name())" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-class ===> ", $_ !! True;
-	self.validate-class: $node, |@classes.map: { ::($_) }
-}
-
-multi method validate-class($node, **@classes) {
-	say ::?CLASS.^name, " : validate-class ($node.^name())" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-class ===> ", $_ !! True;
-	[False, |@classes].reduce(-> $ans, $class {
-		$ans || $node ~~ $class
-	}) ?? ASTQuery::Match.new: :list[$node] !! False
+	@classes = |@classes.flat;
+	print-validator-begin $node, @classes;
+	POST print-validator-end $node, @classes, $_;
+	#my %done := :{};
+	ASTQuery::Match.merge-or: flat @classes.deepmap: -> $class {
+		#next if %done{$class}++;
+		self.validate-class: $node, $class
+	}
 }
 
 method validate-ids($node, @ids) {
+	print-validator-begin $node, @ids;
+	POST print-validator-end $node, @ids, $_;
 	my $key = self.get-id-field: $node;
 	return False unless $key;
 	[||] do for @ids -> $id {
@@ -275,8 +356,8 @@ method validate-ids($node, @ids) {
 	}
 }
 method validate-atts($node, %atts) {
-	say ::?CLASS.^name, " : validate-atts: %atts.gist()" if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-atts ===> ", $_ !! True;
+	print-validator-begin $node, %atts;
+	POST print-validator-end $node, %atts, $_;
 	[True, |%atts.pairs].reduce(-> $ans, (:$key, :$value is copy) {
 		return False unless $ans;
 		$value = $value.($node) if $value ~~ Callable;
@@ -291,8 +372,8 @@ method validate-atts($node, %atts) {
 }
 
 method validate-value($node, $key, $value) {
-	say ::?CLASS.^name, " : validate-value: ", $node if $DEBUG;
-	POST $DEBUG ?? say ::?CLASS.^name, " : validate-value ===> ", $_ !! True;
+	print-validator-begin $node, $value;
+	POST print-validator-end $node, $value, $_;
 	do if $node.^name.starts-with("RakuAST") && $value !~~ ::?CLASS {
 		return False unless $key;
 		return False unless $node.^can: $key;

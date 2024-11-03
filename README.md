@@ -362,6 +362,13 @@ How You Can Help
 
 Note: ASTQuery is developed by Fernando Corrêa de Oliveira.
 
+DEBUG
+=====
+
+For debugging, use the `ASTQUERY_DEBUG` env var.
+
+![Trace example](./trace.png)
+
 CONCLUSION
 ==========
 

@@ -16,7 +16,7 @@ multi ast-query($ast, $matcher) {
 		:$ast,
 		:$matcher,
 	;
-	$match.query;
+	$match.query || Nil;
 }
 
 sub ast-matcher(Str $selector) is export {
@@ -356,6 +356,12 @@ Visit the L<ASTQuery repository|https://github.com/FCO/ASTQuery> on GitHub for e
 =item Documentation: Improve tutorials and guides.
 
 Note: ASTQuery is developed by Fernando Corrêa de Oliveira.
+
+=head1 DEBUG
+
+For debugging, use the C<ASTQUERY_DEBUG> env var.
+
+![Trace example](./trace.png)
 
 =head1 CONCLUSION
 

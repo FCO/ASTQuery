@@ -7,12 +7,26 @@ has $.matcher;
 has $.ast;
 has Bool $.recursive;
 
-method merge(*@matches) {
+method merge-or(*@matches) {
 	my $new = ::?CLASS.new;
-	for @matches -> (:@list, :%hash, |) {
+	for @matches.grep: ::?CLASS -> (:@list, :%hash, |) {
 		$new.list.append: @list;
 		for %hash.kv -> $key, $value {
 			$new.hash.push: $key => $value
+		}
+	}
+	$new || False
+}
+
+method merge-and(*@matches) {
+	my $new = ::?CLASS.new;
+	for @matches -> $m {
+		return False unless $m;
+		given $m -> (:@list, :%hash, |) {
+			$new.list.append: @list;
+			for %hash.kv -> $key, $value {
+				$new.hash.push: $key => $value
+			}
 		}
 	}
 	$new

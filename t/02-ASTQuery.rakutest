@@ -126,7 +126,16 @@ for %(
 		),
 	),
 ).kv -> Str $ast, % (Str :$matcher, :@list, :%hash) {
+	diag "$ast ~~ $matcher";
 	is-deeply ast-query($ast.AST, ast-matcher $matcher),
+		ASTQuery::Match.new(
+			:@list,
+			:%hash,
+			:matcher(ast-matcher $matcher),
+			:ast($ast.AST),
+		)
+	;
+	is-deeply ast-query($ast.AST, $matcher),
 		ASTQuery::Match.new(
 			:@list,
 			:%hash,

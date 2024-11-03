@@ -1,0 +1,39 @@
+use experimental :rakuast;
+use ASTQuery::Matcher;
+use ASTQuery::Match;
+use Test;
+
+
+# validate-class
+
+my \call = RakuAST::Call::Name.new(name => RakuAST::Name.from-identifier("say"));
+
+for [
+	(call, RakuAST::Name        , False),
+	(call, [RakuAST::Name]      , False),
+	(call, [RakuAST::Name xx 10], False),
+
+	(call, "RakuAST::Name"        , False),
+	(call, ["RakuAST::Name"]      , False),
+	(call, ["RakuAST::Name" xx 10], False),
+
+	(call, RakuAST::Call          , ASTQuery::Match.new: :list[call]),
+	(call, [RakuAST::Call]        , ASTQuery::Match.new: :list[call]),
+] -> [$node, $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-class: $node, $value;
+	isa-ok $got, $expected.WHAT;
+	is-deeply $got, $expected;
+}
+
+# validate-groups
+# validate-ids
+# validate-atts
+# validate-code
+
+# validate-child
+# validate-descendant
+# validate-gchild
+# validate-parent
+# validate-ascendant
+
+done-testing
