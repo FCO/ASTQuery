@@ -108,7 +108,6 @@ multi method set-ast-id(Mu:U $class, Str $id) {
 multi method add-to-ast-group(ASTGroup $name, *@classes) {
 	my @new-classes = @classes.duckmap: -> ASTClass:D $class { ::($class) };
 	@new-classes.unshift: |%groups{$name};
-	say @new-classes;
 	self.add-ast-group: $name, @new-classes
 }
 
@@ -321,14 +320,14 @@ method validate-parent($node, $parent) {
 	print-validator-begin $node, $parent;
 	POST print-validator-end $node, $parent, $_;
 	ASTQuery::Match.new(:ast(@*LINEAGE.head), :matcher($parent))
-		.query-root-only;
+		.query-root-only || False
 }
 
 method validate-descendant($node, $child) {
 	print-validator-begin $node, $child;
 	POST print-validator-end $node, $child, $_;
 	ASTQuery::Match.new(:ast($node), :matcher($child))
-		.query-descendants-only;
+		.query-descendants-only || False
 }
 
 method validate-gchild($node, $gchild) {
@@ -353,13 +352,19 @@ method query-child($node, $child, *%pars) {
 method validate-child($node, $child) {
 	print-validator-begin $node, $child;
 	POST print-validator-end $node, $child, $_;
-	self.query-child($node, $child)
+	self.query-child($node, $child) || False
 }
 
-method validate-groups($node, @groups) {
+multi method validate-groups($node, @groups) {
 	print-validator-begin $node, @groups;
 	POST print-validator-end $node, @groups, $_;
-	self.validate-class: $node, %groups{@groups}.flat 
+	self.validate-class: $node, %groups{@groups}.flat.unique
+}
+
+multi method validate-groups($node, $group) {
+	print-validator-begin $node, $group;
+	POST print-validator-end $node, $group, $_;
+	self.validate-groups: $node, [$group,]
 }
 
 multi method validate-class($node, Str $class) {
@@ -379,50 +384,64 @@ multi method validate-class($node, Mu:U $class) {
 }
 
 multi method validate-class($node, @classes) {
-	@classes = |@classes.flat;
 	print-validator-begin $node, @classes;
 	POST print-validator-end $node, @classes, $_;
-	#my %done := :{};
-	ASTQuery::Match.merge-or: flat @classes.deepmap: -> $class {
-		#next if %done{$class}++;
+	my %done := :{};
+	@classes.flatmap(-> $class {
+		next if %done{$class}++;
 		self.validate-class: $node, $class
-	}
+	}).first(*.so) // False
 }
 
-method validate-ids($node, @ids) {
+multi method validate-ids($node, @ids) {
 	print-validator-begin $node, @ids;
 	POST print-validator-end $node, @ids, $_;
 	my $key = self.get-id-field: $node;
 	return False unless $key;
-	[||] do for @ids -> $id {
+	@ids.unique.map(-> $id {
 		self.validate-atts: $node, %($key => $id)
-	}
+	}).first(*.so) // False
 }
+
+multi method validate-ids($node, $id) {
+	print-validator-begin $node, $id;
+	POST print-validator-end $node, $id, $_;
+	self.validate-ids: $node, [$id,]
+}
+
 method validate-atts($node, %atts) {
 	print-validator-begin $node, %atts;
 	POST print-validator-end $node, %atts, $_;
-	[True, |%atts.pairs].reduce(-> $ans, (:$key, :$value is copy) {
-		return False unless $ans;
-		$value = $value.($node) if $value ~~ Callable;
-		my $match = self.validate-value: $node, $key, $value;
-		if $ans	&& $ans ~~ ASTQuery::Match {
-			for $ans.hash.kv -> $key, $value {
-				$match.hash.push: $key => $value
-			}
+	return ASTQuery::Match.new: :list[$node,]
+		if ASTQuery::Match.merge-and: |%atts.kv.map: -> $key, $value is copy {
+			$value = $value.($node) if $value ~~ Callable;
+			self.validate-value: $node, $key, $value;
 		}
-		$match
-	})
+	;
+	False
 }
 
-method validate-value($node, $key, $value) {
+multi method validate-value($node, $key, $ where * =:= False) {
+	print-validator-begin $node, True;
+	POST print-validator-end $node, True, $_;
+	False
+}
+
+multi method validate-value($node, $key, $ where * =:= True) {
+	print-validator-begin $node, True;
+	POST print-validator-end $node, True, $_;
+	ASTQuery::Match.new: :list[$node,]
+}
+
+multi method validate-value($node, $key, $value) {
 	print-validator-begin $node, $value;
 	POST print-validator-end $node, $value, $_;
 	do if $node.^name.starts-with("RakuAST") && $value !~~ ::?CLASS {
 		return False unless $key;
-		return False unless $node.^can: $key;
-		my $nnode = $node."$key"();
-		self.validate-value: $nnode, $.get-id-field($nnode), $value
+		return False unless $node.^can: $key; # it can be a problem if $key is 'none', for example
+		my Any $nnode = $node."$key"();
+		self.validate-value($nnode, $.get-id-field($nnode), $value)
 	} else { 
-		$value.ACCEPTS: $node;
-	}
+		$value.ACCEPTS($node) && ASTQuery::Match.new(:list[$node,])
+	} || False
 }

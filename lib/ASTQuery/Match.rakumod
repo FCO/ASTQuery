@@ -22,7 +22,7 @@ method merge-and(*@matches) {
 	my $new = ::?CLASS.new;
 	for @matches -> $m {
 		return False unless $m;
-		given $m -> (:@list, :%hash, |) {
+		given $m -> ::?CLASS:D (:@list, :%hash, |) {
 			$new.list.append: @list;
 			for %hash.kv -> $key, $value {
 				$new.hash.push: $key => $value
@@ -34,9 +34,52 @@ method merge-and(*@matches) {
 
 method of {RakuAST::Node}
 
-method gist {
+multi prepare-code(@nodes) {
+	"[\n{
+		do for @nodes -> $node {
+			$node.&prepare-code
+		}.join("\n").indent: 2
+	}\n]"
+}
+
+multi prepare-code(RakuAST::Node $node) {
+	"\o33[1m{
+		my $txt = $node
+			.DEPARSE
+			.trans(["\n", "\t"] => ["␤", "␉"])
+			.subst(/\s+/, " ", :g)
+		;
+
+		$txt.chars > 72
+			?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
+			!! $txt
+	}\o33[m"
+}
+
+multi prepare-code($node) {
+	"\o33[31;1m(NOT RakuAST($node.^name()))\o33[m \o33[1m{
+		$node
+			.trans(["\n", "\t"] => ["␤", "␉"])
+	}\o33[m"
+}
+
+
+multi method gist(::?CLASS:U:) {
 	self.raku
 }
+
+multi method gist(::?CLASS:D:) {
+	[
+		|do for self.list.kv -> $i, $code {
+			"$i => { $code.&prepare-code }",
+		},
+		|do for self.hash.kv -> $key, $code {
+			"$key => { $code.&prepare-code }",
+		}
+	].join: "\n"
+}
+
+method Str {self.gist}
 
 sub match($match, $ast, $matcher) {
 	if $matcher.ACCEPTS: $ast -> $m {

@@ -1,5 +1,6 @@
 use experimental :rakuast;
 use ASTQuery;
+use ASTQuery::Matcher;
 use Test;
 
 ok &ast-matcher;
@@ -20,7 +21,7 @@ for %(
 	),
 	"[attribute]" => %(
 		meth  => "atts",
-		value => %(attribute => Whatever),
+		value => %(attribute => True),
 	),
 	"RakuAST::Node > RakuAST::Node" => %(
 		meth  => "child",
@@ -50,10 +51,10 @@ for %(
 		meth  => "name",
 		value => "name",
 	),
-).kv -> $selector, % (Str :$meth, :$value) {
+).kv -> $selector, %h (Str :$meth, :$value) {
 	my $matcher = ast-matcher($selector);
-	isa-ok $matcher, ASTQuery::Matcher;
-	is-deeply $matcher."$meth"(), $value;
+	isa-ok $matcher, ASTQuery::Matcher, "isa-ok: " ~ %h.gist;
+	is-deeply $matcher."$meth"(), $value, "is-deeply: " ~ %h.gist;
 }
 
 for %(

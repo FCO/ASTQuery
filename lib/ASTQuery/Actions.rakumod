@@ -65,8 +65,8 @@ method node-part:<code>($/)       { make (:code($<code>.made))                  
 
 method code($/) { my $code = Q|sub ($_?, :match($/)) { | ~ $<code>.Str ~ Q| }|; make $code.AST.EVAL }
 
-method node-part-attr:<exists>($/)     { make ($<word>.made => Whatever)     }
-method node-part-attr:<block>($/)      { make ($<word>.made => $<code>.made) }
+method node-part-attr:<exists>($/)     { make ($<word>.made => True)                }
+method node-part-attr:<block>($/)      { make ($<word>.made => $<code>.made)        }
 method node-part-attr:<a-value>($/)    { make ($<word>.made => $<str-or-list>.made) }
 #method node-part-attr:<a-contains>($/) { '[' ~ ']' [ <word> '~=' [ <str> | <list> ] ] }
 #method node-part-attr:<a-starts>($/)   { '[' ~ ']' [ <word> '^=' [ <str> | <list> ] ] }

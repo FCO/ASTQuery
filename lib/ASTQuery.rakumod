@@ -2,7 +2,7 @@ use ASTQuery::Grammar;
 use ASTQuery::Actions;
 use ASTQuery::Matcher;
 use ASTQuery::Match;
-unit class ASTQuery;
+#unit class ASTQuery;
 
 proto ast-query($, $) is export {*}
 
@@ -16,7 +16,7 @@ multi ast-query($ast, $matcher) {
 		:$ast,
 		:$matcher,
 	;
-	$match.query || Nil;
+	$match.query || Empty;
 }
 
 sub ast-matcher(Str $selector) is export {

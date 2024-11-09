@@ -6,7 +6,18 @@ use Test;
 
 # validate-class
 
-my \call = RakuAST::Call::Name.new(name => RakuAST::Name.from-identifier("say"));
+my \call = RakuAST::Call::Name.new(
+	name => RakuAST::Name.from-identifier("say"),
+	args => my \arg-list = RakuAST::ArgList.new(
+		my \apply-infix = RakuAST::ApplyInfix.new(
+			  left  => (my \l42 = RakuAST::IntLiteral.new(42)),
+			  infix => RakuAST::Infix.new("+"),
+			  right => my \l13 = RakuAST::IntLiteral.new(13)
+		)
+	)
+);
+
+my \op-arg-list = arg-list.args.head.args;
 
 for [
 	(call, RakuAST::Name        , False),
@@ -19,20 +30,171 @@ for [
 
 	(call, RakuAST::Call          , ASTQuery::Match.new: :list[call]),
 	(call, [RakuAST::Call]        , ASTQuery::Match.new: :list[call]),
-] -> [$node, $value, $expected] {
+	(call, [RakuAST::Call xx 10]  , ASTQuery::Match.new: :list[call]),
+] -> @a [$node, $value, $expected] {
 	my $got = ASTQuery::Matcher.validate-class: $node, $value;
-	isa-ok $got, $expected.WHAT;
-	is-deeply $got, $expected;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
 }
 
 # validate-groups
+
+for [
+	(call, "int"        , False),
+	(call, ["int"]      , False),
+	(call, ["int" xx 10], False),
+
+	(call, "call"        , ASTQuery::Match.new: :list[call]),
+	(call, ["call"]      , ASTQuery::Match.new: :list[call]),
+	(call, ["call" xx 10], ASTQuery::Match.new: :list[call]),
+] -> @a [$node, $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-groups: $node, $value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-ids
+
+for [
+	(call, "none1"        , False),
+	(call, ["none2"]      , False),
+	(call, ["none3" xx 10], False),
+
+	(call, "say"        , ASTQuery::Match.new: :list[call]),
+	(call, ["say"]      , ASTQuery::Match.new: :list[call]),
+	(call, ["say" xx 10], ASTQuery::Match.new: :list[call]),
+] -> @a [$node, $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-ids: $node, $value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-atts
+
+for [
+	(call, "not-an-att", True, False),
+	(call, "name", True, ASTQuery::Match.new: :list[call]),
+	(call, "not-an-att", "something", False),
+	(call, "name", "something", False),
+	(call, "name", { "blablabla" }, False),
+	(call, "name", "say", ASTQuery::Match.new: :list[call]),
+	(call, "name", { <s a y>.join }, ASTQuery::Match.new: :list[call]),
+	(call, "name", { False }, False),
+	(call, "name", { True }, ASTQuery::Match.new: :list[call]),
+] -> @a [$node, Str $name, $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-atts: $node, ($name => $value);
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-code
 
+for [
+	(call, { False }, False),
+	(call, { True }, ASTQuery::Match.new: :list[call]),
+	(call, { .?name.?simple-identifier eq "say" }, ASTQuery::Match.new: :list[call]),
+	(call, { say $/; .?name.?simple-identifier eq "say" }, ASTQuery::Match.new: :list[call]),
+] -> @a [$node, &value, $expected] {
+	my $got = ASTQuery::Matcher.validate-code: $node, &value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-child
+
+for [
+	(
+		call,
+		ASTQuery::Matcher.new(
+			:classes["RakuAST::IntLiteral",]
+		),
+		False
+	),
+	(
+		call,
+		my $m1 = ASTQuery::Matcher.new(
+			:classes["RakuAST::ArgList",]
+		),
+		ASTQuery::Match.new:
+			:list[call.args],
+			:matcher($m1),
+			:ast(call)
+	),
+] -> @a [$node, ASTQuery::Matcher $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-child: $node, $value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-descendant
+
+for [
+	(
+		call,
+		ASTQuery::Matcher.new(
+			:classes["RakuAST::Ternary",]
+		),
+		False
+	),
+	(
+		call,
+		my $m2 = ASTQuery::Matcher.new(
+			:classes["RakuAST::ApplyInfix",]
+		),
+		ASTQuery::Match.new:
+			:list[apply-infix],
+			:matcher($m2),
+			:ast(call)
+	),
+	(
+		call,
+		my $m3 = ASTQuery::Matcher.new(
+			:classes["RakuAST::IntLiteral",]
+		),
+		ASTQuery::Match.new:
+			:list[l42, l13],
+			:matcher($m3),
+			:ast(call)
+	),
+] -> @a [$node, ASTQuery::Matcher $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-descendant: $node, $value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
 # validate-gchild
+
+for [
+	(
+		call,
+		ASTQuery::Matcher.new(
+			:classes["RakuAST::Ternary",]
+		),
+		False
+	),
+	(
+		call,
+		ASTQuery::Matcher.new(
+			:classes["RakuAST::ApplyInfix",]
+		),
+		ASTQuery::Match.new:
+			:list[apply-infix],
+			# Should it be returning the rest of the data or should we remove it from the others?
+	),
+	(
+		call,
+		ASTQuery::Matcher.new(
+			:classes["RakuAST::IntLiteral",]
+		),
+		False
+	),
+] -> @a [$node, ASTQuery::Matcher $value, $expected] {
+	my $got = ASTQuery::Matcher.validate-gchild: $node, $value;
+	isa-ok $got, $expected.WHAT, "isa-ok: " ~ @a.gist;
+	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
+}
+
+# TODO: missing how to test the following methods:
 # validate-parent
 # validate-ascendant
 
