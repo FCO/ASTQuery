@@ -2,7 +2,7 @@ use ASTQuery::Grammar;
 use ASTQuery::Actions;
 use ASTQuery::Matcher;
 use ASTQuery::Match;
-#unit class ASTQuery;
+unit module ASTQuery;
 
 proto ast-query($, $) is export {*}
 
