@@ -51,8 +51,11 @@ my %groups is Map = (
 		RakuAST::Var,
 	],
 	var-declaration => [
-		RakuAST::VarDeclaration,
+		#RakuAST::VarDeclaration,
 		RakuAST::VarDeclaration::Simple,
+	],
+	method-declaration => [
+		RakuAST::Method
 	],
 );
 
@@ -214,18 +217,25 @@ sub prepare-indent($indent, :$end) {
 	}\o33[m"
 }
 
-multi prepare-code(RakuAST::Node $node) {
-	"\o33[1m{
-		my $txt = $node
-			.DEPARSE(ASTQuery::HighLighter)
-			.trans(["\n", "\t"] => ["␤", "␉"])
-			.subst(/\s+/, " ", :g)
-		;
+sub deparse-and-format($node) {
+	CATCH {
+		default {
+			return "\o33[31;1m{$node.^name} cannot be deparsed: $_\o33[m"
+		}
+	}
 
-		$txt.chars > 72
-			?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
-			!! $txt
-	}\o33[m"
+	my $code = $node.DEPARSE(ASTQuery::HighLighter);
+	my $txt = $code.trans(["\n", "\t"] => ["␤", "␉"])
+		.subst(/\s+/, " ", :g)
+	;
+
+	$txt.chars > 72
+		?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
+		!! $txt
+}
+
+multi prepare-code(RakuAST::Node $node) {
+	"\o33[1m{$node.&deparse-and-format}\o33[m"
 }
 
 multi prepare-code($node) {

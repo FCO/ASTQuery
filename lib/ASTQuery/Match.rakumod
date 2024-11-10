@@ -44,18 +44,13 @@ multi prepare-code(@nodes) {
 }
 
 multi prepare-code(RakuAST::Node $node) {
+	CATCH {
+		default {
+			return "\o33[31;1m{$node.^name} cannot be deparsed\o33[m"
+		}
+	}
 	"\o33[1m{
-		my $txt = $node
-			.DEPARSE(ASTQuery::HighLighter)
-			#.trans(["\n", "\t"] => ["␤", "␉"])
-			#.subst(/\s+/, " ", :g)
-		;
-
-		#$txt.chars > 72
-		#	?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
-		#	!! $txt
-		
-		$txt
+		$node.DEPARSE(ASTQuery::HighLighter)
 	}\o33[m"
 }
 
@@ -99,11 +94,9 @@ sub match($match, $ast, $matcher) {
 sub prepare-visitor($match, $matcher) {
 	my UInt $position = 0;
 	sub visitor($node, :$run-children, :$recursive = $*recursive // True, :$ignore-root = False) {
-		#say "visitor: $recursive, $ignore-root: ", $matcher, " -> ", $node.^name;
 		$position++;
 		my @lineage = @*LINEAGE;
 		match $match, $node, $matcher unless $ignore-root;
-		#say $match.list;
 		{
 			my @*LINEAGE = $node, |@lineage;
 			my $*recursive = $run-children.defined ?? !$run-children !! $recursive;

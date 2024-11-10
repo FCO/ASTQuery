@@ -15,6 +15,7 @@
     "ASTQuery": "lib/ASTQuery.rakumod",
     "ASTQuery::Actions": "lib/ASTQuery/Actions.rakumod",
     "ASTQuery::Grammar": "lib/ASTQuery/Grammar.rakumod",
+    "ASTQuery::HighLighter": "lib/ASTQuery/HighLighter.rakumod",
     "ASTQuery::Match": "lib/ASTQuery/Match.rakumod",
     "ASTQuery::Matcher": "lib/ASTQuery/Matcher.rakumod"
   },
