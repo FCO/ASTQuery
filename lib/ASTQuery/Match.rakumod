@@ -1,4 +1,5 @@
 use experimental :rakuast;
+use ASTQuery::HighLighter;
 unit class ASTQuery::Match does Positional does Associative;
 
 has @.list is Array handles <AT-POS push Bool>;
@@ -45,14 +46,16 @@ multi prepare-code(@nodes) {
 multi prepare-code(RakuAST::Node $node) {
 	"\o33[1m{
 		my $txt = $node
-			.DEPARSE
-			.trans(["\n", "\t"] => ["␤", "␉"])
-			.subst(/\s+/, " ", :g)
+			.DEPARSE(ASTQuery::HighLighter)
+			#.trans(["\n", "\t"] => ["␤", "␉"])
+			#.subst(/\s+/, " ", :g)
 		;
 
-		$txt.chars > 72
-			?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
-			!! $txt
+		#$txt.chars > 72
+		#	?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
+		#	!! $txt
+		
+		$txt
 	}\o33[m"
 }
 

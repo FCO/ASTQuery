@@ -1,5 +1,6 @@
 use experimental :rakuast, :will-complain;
 use ASTQuery::Match;
+use ASTQuery::HighLighter;
 unit class ASTQuery::Matcher;
 
 my $DEBUG = %*ENV<ASTQUERY_DEBUG>;
@@ -216,13 +217,13 @@ sub prepare-indent($indent, :$end) {
 multi prepare-code(RakuAST::Node $node) {
 	"\o33[1m{
 		my $txt = $node
-			.DEPARSE
+			.DEPARSE(ASTQuery::HighLighter)
 			.trans(["\n", "\t"] => ["␤", "␉"])
 			.subst(/\s+/, " ", :g)
 		;
 
-		$txt.chars > 22
-			?? $txt.substr(0, 22) ~ "\o33[30;1m...\o33[m"
+		$txt.chars > 72
+			?? $txt.substr(0, 72) ~ "\o33[30;1m...\o33[m"
 			!! $txt
 	}\o33[m"
 }
