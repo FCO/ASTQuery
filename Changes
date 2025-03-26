@@ -1,6 +1,8 @@
 Revision history for ASTQuery
 
 {{$NEXT}}
+
+0.0.3  2025-03-26T10:07:08Z
     - Remove deleted RakuAST classes
 
 0.0.2  2024-11-16T19:04:59Z
