@@ -59,10 +59,8 @@ my $DEBUG = %*ENV<ASTQUERY_DEBUG>;
 =item RakuAST::Knowhow
 =item RakuAST::Label
 =item RakuAST::LexicalScope
-=item RakuAST::ListLiteral
 =item RakuAST::Literal
 =item RakuAST::Lookup
-=item RakuAST::MapLiteral
 =item RakuAST::Meta
 =item RakuAST::MetaInfix
 =item RakuAST::Method
@@ -407,8 +405,6 @@ my %groups is Map = (
 		RakuAST::RatLiteral,
 		RakuAST::VersionLiteral,
 		RakuAST::Constant,
-		RakuAST::ListLiteral,
-		RakuAST::MapLiteral,
 		RakuAST::Literal
 	],
 	statement => [
