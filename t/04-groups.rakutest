@@ -1,0 +1,203 @@
+use Test;
+use ASTQuery::Matcher;
+
+plan 30; # 22 main groups + 8 convenience groups
+
+# Helper to test if a group contains expected types
+sub test-group(Str $group-name, @expected-types, $description) {
+    subtest $description, {
+        plan 2;
+        
+        # Test that the group exists
+        ok %ASTQuery::Matcher::groups{$group-name}:exists, "Group '$group-name' exists";
+        
+        # Test that the group contains the expected number of types
+        my @group-types = %ASTQuery::Matcher::groups{$group-name}.list;
+        cmp-ok @group-types.elems, '>=', @expected-types.elems, 
+            "Group '$group-name' has at least {@expected-types.elems} types (found {@group-types.elems})";
+        
+        # Additional verification that some key types are present
+        if @expected-types {
+            my @found-types = @group-types.map(*.^name);
+            for @expected-types -> $expected {
+                ok $expected ∈ @found-types, "Type '$expected' found in group '$group-name'";
+            }
+        }
+    }
+}
+
+# Test Main Groups
+test-group("expression", [
+    "RakuAST::ApplyInfix", 
+    "RakuAST::ApplyPrefix", 
+    "RakuAST::Infix"
+], "expression group contains operator types");
+
+test-group("literal", [
+    "RakuAST::IntLiteral",
+    "RakuAST::StrLiteral", 
+    "RakuAST::NumLiteral"
+], "literal group contains literal types");
+
+test-group("statement", [
+    "RakuAST::Block",
+    "RakuAST::Statement::If",
+    "RakuAST::Statement::For"
+], "statement group contains statement types");
+
+test-group("declaration", [
+    "RakuAST::Class",
+    "RakuAST::Method",
+    "RakuAST::Var"
+], "declaration group contains declaration types");
+
+test-group("control", [
+    "RakuAST::Statement::If",
+    "RakuAST::Statement::Unless",
+    "RakuAST::FlipFlop"
+], "control group contains control flow types");
+
+test-group("phaser", [
+    "RakuAST::StatementPrefix::Phaser::Begin",
+    "RakuAST::BeginTime",
+    "RakuAST::CheckTime"
+], "phaser group contains phaser types");
+
+test-group("regex", [
+    "RakuAST::Regex",
+    "RakuAST::QuotedRegex",
+    "RakuAST::Regex::Literal"
+], "regex group contains regex types");
+
+test-group("data", [
+    "RakuAST::ColonPair",
+    "RakuAST::ArgList",
+    "RakuAST::Circumfix"
+], "data group contains data structure types");
+
+test-group("code", [
+    "RakuAST::Method",
+    "RakuAST::Sub",
+    "RakuAST::Block"
+], "code group contains code structure types");
+
+test-group("type", [
+    "RakuAST::Type",
+    "RakuAST::Trait",
+    "RakuAST::Type::Simple"
+], "type group contains type system types");
+
+test-group("meta", [
+    "RakuAST::Meta",
+    "RakuAST::MetaInfix",
+    "RakuAST::CurryThunk"
+], "meta group contains meta-programming types");
+
+test-group("doc", [
+    "RakuAST::Doc",
+    "RakuAST::Pragma",
+    "RakuAST::Doc::Block"
+], "doc group contains documentation types");
+
+test-group("special", [
+    "RakuAST::Term",
+    "RakuAST::Stub",
+    "RakuAST::OnlyStar"
+], "special group contains special construct types");
+
+test-group("prefix", [
+    "RakuAST::StatementPrefix",
+    "RakuAST::Prefix",
+    "RakuAST::StatementPrefix::Try"
+], "prefix group contains prefix types");
+
+test-group("postfix", [
+    "RakuAST::Postfix",
+    "RakuAST::Postfixish",
+    "RakuAST::Postfix::Power"
+], "postfix group contains postfix types");
+
+test-group("var", [
+    "RakuAST::Var",
+    "RakuAST::Var::Lexical",
+    "RakuAST::VarDeclaration"
+], "var group contains variable types");
+
+test-group("parameter", [
+    "RakuAST::Parameter",
+    "RakuAST::ParameterTarget",
+    "RakuAST::ParameterDefaultThunk"
+], "parameter group contains parameter types");
+
+test-group("initializer", [
+    "RakuAST::Initializer",
+    "RakuAST::Assignment",
+    "RakuAST::Initializer::Assign"
+], "initializer group contains initializer types");
+
+test-group("metainfix", [
+    "RakuAST::MetaInfix",
+    "RakuAST::MetaInfix::Hyper",
+    "RakuAST::MetaInfix::Cross"
+], "metainfix group contains meta-infix types");
+
+test-group("compile", [
+    "RakuAST::CompUnit",
+    "RakuAST::Name",
+    "RakuAST::Lookup"
+], "compile group contains compilation types");
+
+test-group("core", [
+    "RakuAST::Node",
+    "RakuAST::Expression"
+], "core group contains fundamental types");
+
+test-group("compile", [
+    "RakuAST::CompUnit",
+    "RakuAST::CompileTimeValue"
+], "compile group contains compile-time types");
+
+# Test Convenience Groups
+test-group("call", [
+    "RakuAST::Call"
+], "call convenience group");
+
+test-group("int", [
+    "RakuAST::IntLiteral"
+], "int convenience group");
+
+test-group("str", [
+    "RakuAST::StrLiteral"
+], "str convenience group");
+
+test-group("op", [
+    "RakuAST::Infixish",
+    "RakuAST::Prefixish",
+    "RakuAST::Postfixish"
+], "op convenience group");
+
+test-group("apply-op", [
+    "RakuAST::ApplyInfix",
+    "RakuAST::ApplyPrefix",
+    "RakuAST::Ternary"
+], "apply-op convenience group");
+
+test-group("conditional", [
+    "RakuAST::Statement::If",
+    "RakuAST::Statement::Unless",
+    "RakuAST::Statement::When"
+], "conditional convenience group");
+
+test-group("iterable", [
+    "RakuAST::Statement::For",
+    "RakuAST::Statement::Loop",
+    "RakuAST::ForLoopImplementation"
+], "iterable convenience group");
+
+test-group("ignorable", [
+    "RakuAST::Block",
+    "RakuAST::StatementList",
+    "RakuAST::ArgList"
+], "ignorable convenience group");
+
+done-testing;

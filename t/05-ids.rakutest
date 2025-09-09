@@ -1,0 +1,144 @@
+use Test;
+use ASTQuery::Matcher;
+
+plan 69; # Test all 69 ID mappings
+
+# Helper to test ID mappings
+sub test-id-mapping(Str $type-name, Str $expected-attr, $description) {
+    subtest $description, {
+        plan 2;
+        
+        # Test that the mapping exists
+        ok %ASTQuery::Matcher::id{$type-name}:exists, "ID mapping exists for '$type-name'";
+        
+        # Test that the mapping points to the expected attribute
+        is %ASTQuery::Matcher::id{$type-name}, $expected-attr, 
+            "ID mapping for '$type-name' points to '$expected-attr'";
+    }
+}
+
+# Test all ID mappings organized by attribute type
+
+# value - Literal Values (7 mappings)
+test-id-mapping("RakuAST::Literal", "value", "Literal base type maps to value");
+test-id-mapping("RakuAST::IntLiteral", "value", "Integer literals map to value");
+test-id-mapping("RakuAST::NumLiteral", "value", "Numeric literals map to value");
+test-id-mapping("RakuAST::StrLiteral", "value", "String literals map to value");
+test-id-mapping("RakuAST::RatLiteral", "value", "Rational literals map to value");
+test-id-mapping("RakuAST::ComplexLiteral", "value", "Complex literals map to value");
+test-id-mapping("RakuAST::VersionLiteral", "value", "Version literals map to value");
+
+# name - Named Constructs (19 mappings)
+test-id-mapping("RakuAST::Call", "name", "Calls map to name");
+test-id-mapping("RakuAST::Method", "name", "Methods map to name");
+test-id-mapping("RakuAST::Sub", "name", "Subroutines map to name");
+test-id-mapping("RakuAST::Submethod", "name", "Submethods map to name");
+test-id-mapping("RakuAST::Routine", "name", "Routines map to name");
+test-id-mapping("RakuAST::Class", "name", "Classes map to name");
+test-id-mapping("RakuAST::Role", "name", "Roles map to name");
+test-id-mapping("RakuAST::Module", "name", "Modules map to name");
+test-id-mapping("RakuAST::Grammar", "name", "Grammars map to name");
+test-id-mapping("RakuAST::Package", "name", "Packages map to name");
+test-id-mapping("RakuAST::VarDeclaration", "name", "Variable declarations map to name");
+test-id-mapping("RakuAST::Var", "name", "Variables map to name");
+test-id-mapping("RakuAST::Var::Attribute", "name", "Attributes map to name");
+test-id-mapping("RakuAST::RegexDeclaration", "name", "Regex declarations map to name");
+test-id-mapping("RakuAST::RuleDeclaration", "name", "Rule declarations map to name");
+test-id-mapping("RakuAST::TokenDeclaration", "name", "Token declarations map to name");
+test-id-mapping("RakuAST::Label", "name", "Labels map to name");
+test-id-mapping("RakuAST::NamedArg", "name", "Named arguments map to name");
+test-id-mapping("RakuAST::Regex::NamedCapture", "name", "Named captures map to name");
+
+# desigilname - Variable Names Without Sigils (3 mappings)
+test-id-mapping("RakuAST::Var::Lexical", "desigilname", "Lexical variables map to desigilname");
+test-id-mapping("RakuAST::Var::Package", "desigilname", "Package variables map to desigilname");
+test-id-mapping("RakuAST::Var::Dynamic", "desigilname", "Dynamic variables map to desigilname");
+
+# condition - Conditional Expressions (12 mappings)
+test-id-mapping("RakuAST::Statement::IfWith", "condition", "If-with statements map to condition");
+test-id-mapping("RakuAST::Statement::Unless", "condition", "Unless statements map to condition");
+test-id-mapping("RakuAST::Statement::If", "condition", "If statements map to condition");
+test-id-mapping("RakuAST::Statement::When", "condition", "When statements map to condition");
+test-id-mapping("RakuAST::Statement::With", "condition", "With statements map to condition");
+test-id-mapping("RakuAST::Statement::Without", "condition", "Without statements map to condition");
+test-id-mapping("RakuAST::Statement::Loop", "condition", "Loop statements map to condition");
+test-id-mapping("RakuAST::Statement::Loop::While", "condition", "While loops map to condition");
+test-id-mapping("RakuAST::Statement::Loop::Until", "condition", "Until loops map to condition");
+test-id-mapping("RakuAST::Statement::Loop::RepeatWhile", "condition", "Repeat-while loops map to condition");
+test-id-mapping("RakuAST::Statement::Loop::RepeatUntil", "condition", "Repeat-until loops map to condition");
+test-id-mapping("RakuAST::Ternary", "condition", "Ternary operators map to condition");
+
+# operator - Operator Names (3 mappings)
+test-id-mapping("RakuAST::Infix", "operator", "Infix operators map to operator");
+test-id-mapping("RakuAST::Prefix", "operator", "Prefix operators map to operator");
+test-id-mapping("RakuAST::Postfix", "operator", "Postfix operators map to operator");
+
+# infix - Applied Infix Operators (4 mappings)
+test-id-mapping("RakuAST::ApplyInfix", "infix", "Applied infix operators map to infix");
+test-id-mapping("RakuAST::ApplyListInfix", "infix", "Applied list infix operators map to infix");
+test-id-mapping("RakuAST::ApplyDottyInfix", "infix", "Applied dotty infix operators map to infix");
+test-id-mapping("RakuAST::Infixish", "infix", "Infix-like operators map to infix");
+
+# prefix - Applied Prefix Operators (1 mapping)
+test-id-mapping("RakuAST::ApplyPrefix", "prefix", "Applied prefix operators map to prefix");
+
+# postfix - Applied Postfix Operators (1 mapping)
+test-id-mapping("RakuAST::ApplyPostfix", "postfix", "Applied postfix operators map to postfix");
+
+# function - Function Names (1 mapping)
+test-id-mapping("RakuAST::FunctionInfix", "function", "Function infix operators map to function");
+
+# simple-identifier - Simple Name Identifiers (2 mappings)
+test-id-mapping("RakuAST::Name", "simple-identifier", "Names map to simple-identifier");
+test-id-mapping("RakuAST::Term::Name", "name", "Term names map to name");
+
+# expression - Expression Content (1 mapping)
+test-id-mapping("RakuAST::Statement::Expression", "expression", "Expression statements map to expression");
+
+# topic - Topic Expressions (1 mapping)
+test-id-mapping("RakuAST::Statement::Given", "topic", "Given statements map to topic");
+
+# source - Source Expressions (1 mapping)
+test-id-mapping("RakuAST::Statement::For", "source", "For statements map to source");
+
+# args - Argument Lists (1 mapping)
+test-id-mapping("RakuAST::ArgList", "args", "Argument lists map to args");
+
+# target - Parameter Targets (1 mapping)
+test-id-mapping("RakuAST::Parameter", "target", "Parameters map to target");
+
+# type - Type Information (5 mappings)
+test-id-mapping("RakuAST::Trait", "type", "Traits map to type");
+test-id-mapping("RakuAST::Trait::Does", "type", "Does traits map to type");
+test-id-mapping("RakuAST::Trait::Is", "type", "Is traits map to type");
+test-id-mapping("RakuAST::Trait::Of", "type", "Of traits map to type");
+test-id-mapping("RakuAST::Trait::Returns", "type", "Returns traits map to type");
+
+# key - Key Values (4 mappings)
+test-id-mapping("RakuAST::ColonPair", "key", "Colon pairs map to key");
+test-id-mapping("RakuAST::ColonPair::Value", "key", "Value colon pairs map to key");
+test-id-mapping("RakuAST::ColonPair::Variable", "key", "Variable colon pairs map to key");
+test-id-mapping("RakuAST::FatArrow", "key", "Fat arrows map to key");
+
+# text - Text Content (1 mapping)
+test-id-mapping("RakuAST::Regex::Literal", "text", "Regex literals map to text");
+
+# literal - Literal Content (1 mapping)
+test-id-mapping("RakuAST::QuotedString", "literal", "Quoted strings map to literal");
+
+# Test the get-id-field method (simplified without actual RakuAST nodes)
+subtest "get-id-field method tests", {
+    plan 2;
+    
+    my $matcher = ASTQuery::Matcher.new;
+    
+    # Test that method exists
+    ok $matcher.can('get-id-field'), "get-id-field method exists";
+    
+    # Test with a mock object to ensure it doesn't crash
+    my $mock-type = class MockType { method ^name { "RakuAST::IntLiteral" } }.new;
+    my $result = $matcher.get-id-field($mock-type);
+    ok defined($result) || $result === Nil, "get-id-field returns defined value or Nil";
+};
+
+done-testing;
