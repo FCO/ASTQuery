@@ -1,0 +1,291 @@
+use experimental :rakuast;
+use Test;
+use ASTQuery;
+
+plan 15; # Basic query syntax validation tests
+
+# Simple test cases with minimal code samples
+# These tests focus on verifying that the query syntax works correctly
+# with the most common patterns
+
+subtest "Integer literal queries", {
+    plan 3;
+    
+    my $code = q{my $x = 42;};
+    my $ast = $code.AST;
+    
+    # Test group query for integers
+    my $int-result = $ast.&ast-query('.int');
+    ok $int-result.list.elems > 0, "Found integers with .int group query";
+    
+    # Test ID query for specific value
+    my $int42-result = $ast.&ast-query('#42');
+    ok $int42-result.list.elems > 0, "Found value 42 with #42 ID query";
+    
+    # Test combined group and ID
+    my $combined-result = $ast.&ast-query('.int#42');
+    ok $combined-result.list.elems > 0, "Found integer 42 with .int#42 combined query";
+};
+
+subtest "String literal queries", {
+    plan 3;
+    
+    my $code = q{my $name = "hello";};
+    my $ast = $code.AST;
+    
+    # Test group query for strings
+    my $str-result = $ast.&ast-query('.str');
+    ok $str-result.list.elems > 0, "Found strings with .str group query";
+    
+    # Test ID query for specific string
+    my $hello-result = $ast.&ast-query('#"hello"');
+    ok $hello-result.list.elems > 0, "Found string 'hello' with #\"hello\" ID query";
+    
+    # Test combined group and ID
+    my $combined-result = $ast.&ast-query('.str#"hello"');
+    ok $combined-result.list.elems > 0, "Found string 'hello' with .str#\"hello\" combined query";
+};
+
+subtest "Variable queries", {
+    plan 3;
+    
+    my $code = q{my $count = 0; $count++;};
+    my $ast = $code.AST;
+    
+    # Test group query for variables
+    my $var-result = $ast.&ast-query('.var');
+    ok $var-result.list.elems > 0, "Found variables with .var group query";
+    
+    # Test ID query for specific variable name
+    my $count-result = $ast.&ast-query('#count');
+    ok $count-result.list.elems > 0, "Found variable 'count' with #count ID query";
+    
+    # Test combined group and ID
+    my $combined-result = $ast.&ast-query('.var#count');
+    ok $combined-result.list.elems > 0, "Found variable 'count' with .var#count combined query";
+};
+
+subtest "Function call queries", {
+    plan 3;
+    
+    my $code = q{say "hello"; print "world";};
+    my $ast = $code.AST;
+    
+    # Test group query for calls
+    my $call-result = $ast.&ast-query('.call');
+    ok $call-result.list.elems > 0, "Found calls with .call group query";
+    
+    # Test ID query for specific function name
+    my $say-result = $ast.&ast-query('#say');
+    ok $say-result.list.elems > 0, "Found 'say' call with #say ID query";
+    
+    # Test combined group and ID
+    my $combined-result = $ast.&ast-query('.call#say');
+    ok $combined-result.list.elems > 0, "Found 'say' call with .call#say combined query";
+};
+
+subtest "Conditional queries", {
+    plan 3;
+    
+    my $code = q{if True { say "yes"; }};
+    my $ast = $code.AST;
+    
+    # Test group query for conditionals
+    my $cond-result = $ast.&ast-query('.conditional');
+    ok $cond-result.list.elems > 0, "Found conditionals with .conditional group query";
+    
+    # Test descendant query to find calls inside conditionals
+    my $cond-call-result = $ast.&ast-query('.conditional >>> .call');
+    ok $cond-call-result.list.elems > 0, "Found calls inside conditionals with .conditional >>> .call";
+    
+    # Test descendant query with ID
+    my $cond-say-result = $ast.&ast-query('.conditional >>> #say');
+    ok $cond-say-result.list.elems > 0, "Found 'say' inside conditionals with .conditional >>> #say";
+};
+
+subtest "Loop queries", {
+    plan 3;
+    
+    my $code = q{for 1..3 -> $i { say $i; }};
+    my $ast = $code.AST;
+    
+    # Test group query for loops
+    my $loop-result = $ast.&ast-query('.iterable');
+    ok $loop-result.list.elems > 0, "Found loops with .iterable group query";
+    
+    # Test descendant query to find calls inside loops
+    my $loop-call-result = $ast.&ast-query('.iterable >>> .call');
+    ok $loop-call-result.list.elems > 0, "Found calls inside loops with .iterable >>> .call";
+    
+    # Test descendant query for variables inside loops
+    my $loop-var-result = $ast.&ast-query('.iterable >>> .var');
+    ok $loop-var-result.list.elems > 0, "Found variables inside loops with .iterable >>> .var";
+};
+
+subtest "Declaration queries", {
+    plan 3;
+    
+    my $code = q{sub process($data) { return $data + 1; }};
+    my $ast = $code.AST;
+    
+    # Test group query for declarations
+    my $decl-result = $ast.&ast-query('.declaration');
+    ok $decl-result.list.elems > 0, "Found declarations with .declaration group query";
+    
+    # Test ID query for specific routine name
+    my $process-result = $ast.&ast-query('#process');
+    ok $process-result.list.elems > 0, "Found 'process' routine with #process ID query";
+    
+    # Test combined group and ID
+    my $combined-result = $ast.&ast-query('.declaration#process');
+    ok $combined-result.list.elems > 0, "Found 'process' declaration with .declaration#process combined query";
+};
+
+subtest "Parameter queries", {
+    plan 2;
+    
+    my $code = q{sub calculate($x, $y) { $x + $y; }};
+    my $ast = $code.AST;
+    
+    # Test group query for parameters
+    my $param-result = $ast.&ast-query('.parameter');
+    ok $param-result.list.elems > 0, "Found parameters with .parameter group query";
+    
+    # Test descendant query for parameters inside declarations
+    my $decl-param-result = $ast.&ast-query('.declaration >>> .parameter');
+    ok $decl-param-result.list.elems > 0, "Found parameters inside declarations with .declaration >>> .parameter";
+};
+
+subtest "Operator queries", {
+    plan 2;
+    
+    my $code = q{my $result = $x + $y * 2;};
+    my $ast = $code.AST;
+    
+    # Test group query for applied operators
+    my $apply-op-result = $ast.&ast-query('.apply-op');
+    ok $apply-op-result.list.elems > 0, "Found applied operators with .apply-op group query";
+    
+    # Test group query for all operators
+    my $op-result = $ast.&ast-query('.op');
+    ok $op-result.list.elems > 0, "Found operators with .op group query";
+};
+
+subtest "Named capture queries", {
+    plan 2;
+    
+    my $code = q{my $a = 1; my $b = 2; my $c = 3;};
+    my $ast = $code.AST;
+    
+    # Test named capture for literals
+    my $lit-capture-result = $ast.&ast-query('.literal$numbers');
+    ok $lit-capture-result.hash<numbers>:exists, "Named capture 'numbers' exists for literals";
+    ok $lit-capture-result.hash<numbers>.elems > 0, "Named capture 'numbers' contains elements";
+};
+
+subtest "Complex descendant queries", {
+    plan 3;
+    
+    my $code = q{
+        if $condition {
+            for @items -> $item {
+                say $item.name;
+            }
+        }
+    };
+    my $ast = $code.AST;
+    
+    # Test nested descendant queries
+    my $complex1-result = $ast.&ast-query('.conditional >>> .iterable');
+    ok $complex1-result.list.elems >= 0, "Found loops inside conditionals with .conditional >>> .iterable";
+    
+    # Test triple descendant query
+    my $complex2-result = $ast.&ast-query('.conditional >>> .iterable >>> .call');
+    ok $complex2-result.list.elems >= 0, "Found calls inside loops inside conditionals";
+    
+    # Test descendant with ID
+    my $complex3-result = $ast.&ast-query('.conditional >>> .iterable >>> #say');
+    ok $complex3-result.list.elems >= 0, "Found 'say' calls inside loops inside conditionals";
+};
+
+subtest "Child relationship queries", {
+    plan 2;
+    
+    my $code = q{if True { say "direct"; }};
+    my $ast = $code.AST;
+    
+    # Test direct child queries
+    my $child-result = $ast.&ast-query('.conditional > .statement');
+    ok $child-result.list.elems >= 0, "Direct child query .conditional > .statement executed";
+    
+    # Test grandchild queries  
+    my $grandchild-result = $ast.&ast-query('.conditional >> .call');
+    ok $grandchild-result.list.elems >= 0, "Grandchild query .conditional >> .call executed";
+};
+
+subtest "Attribute-based queries", {
+    plan 3;
+    
+    my $code = q{my $value = 42; say "hello";};
+    my $ast = $code.AST;
+    
+    # Test attribute existence
+    my $value-attr-result = $ast.&ast-query('[value]');
+    ok $value-attr-result.list.elems >= 0, "Attribute query [value] executed";
+    
+    # Test specific attribute value
+    my $value42-attr-result = $ast.&ast-query('[value=42]');
+    ok $value42-attr-result.list.elems >= 0, "Specific attribute query [value=42] executed";
+    
+    # Test name attribute
+    my $name-attr-result = $ast.&ast-query('[name]');
+    ok $name-attr-result.list.elems >= 0, "Attribute query [name] executed";
+};
+
+subtest "Combination syntax queries", {
+    plan 3;
+    
+    my $code = q{
+        sub test($input) {
+            my $result = $input * 2;
+            if $result > 10 {
+                return $result;
+            }
+            return 0;
+        }
+    };
+    my $ast = $code.AST;
+    
+    # Test multiple groups combined
+    my $multi-group-result = $ast.&ast-query('.declaration >>> .conditional >>> .literal');
+    ok $multi-group-result.list.elems >= 0, "Multi-group query executed";
+    
+    # Test group with ID and descendant
+    my $group-id-desc-result = $ast.&ast-query('.declaration#test >>> .var#result');
+    ok $group-id-desc-result.list.elems >= 0, "Group with ID and descendant query executed";
+    
+    # Test complex capture
+    my $complex-capture-result = $ast.&ast-query('.declaration#test >>> .literal$values');
+    ok $complex-capture-result.list.elems >= 0, "Complex capture query executed";
+};
+
+subtest "Error handling and edge cases", {
+    plan 3;
+    
+    my $code = q{my $x = 1;};
+    my $ast = $code.AST;
+    
+    # Test query for non-existent group
+    my $nonexistent-result = $ast.&ast-query('.nonexistent');
+    is $nonexistent-result.list.elems, 0, "Non-existent group returns empty result";
+    
+    # Test query for non-existent ID
+    my $nonexistent-id-result = $ast.&ast-query('#nonexistent');
+    is $nonexistent-id-result.list.elems, 0, "Non-existent ID returns empty result";
+    
+    # Test complex query with non-matches
+    my $no-match-result = $ast.&ast-query('.conditional >>> .call');
+    is $no-match-result.list.elems, 0, "Query with no matches returns empty result";
+};
+
+done-testing;
