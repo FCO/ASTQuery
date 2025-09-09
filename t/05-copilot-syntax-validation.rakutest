@@ -1,0 +1,111 @@
+use ASTQuery::Grammar;
+use Test;
+
+# Grammar validation tests for all syntax examples in .github/copilot-instructions.md
+# This ensures all documented query patterns can be parsed correctly
+
+# Test basic node type matching patterns
+subtest 'Basic node type matching syntax' => {
+    ok ASTQuery::Grammar.parse('.int'), "'.int' syntax is valid";
+    ok ASTQuery::Grammar.parse('RakuAST::Call'), "'RakuAST::Call' syntax is valid";
+    ok ASTQuery::Grammar.parse('RakuAST::IntLiteral'), "'RakuAST::IntLiteral' syntax is valid";
+}
+
+# Test attribute matching patterns
+subtest 'Attribute matching syntax' => {
+    ok ASTQuery::Grammar.parse('.int[value=42]'), "'.int[value=42]' syntax is valid";
+    ok ASTQuery::Grammar.parse('.call[name]'), "'.call[name]' syntax is valid";
+    ok ASTQuery::Grammar.parse('[attribute]'), "'[attribute]' syntax is valid";
+    ok ASTQuery::Grammar.parse('.apply-op[left=1, right=3]'), "'.apply-op[left=1, right=3]' syntax is valid";
+}
+
+# Test ID matching patterns
+subtest 'ID matching syntax' => {
+    ok ASTQuery::Grammar.parse('#42'), "'#42' syntax is valid";
+    ok ASTQuery::Grammar.parse('#blablabla'), "'#blablabla' syntax is valid";
+}
+
+# Test relationship operators - the key new syntax from copilot instructions
+subtest 'Relationship operators syntax' => {
+    # Direct child operators
+    ok ASTQuery::Grammar.parse('.call > .int'), "'.call > .int' (direct child) syntax is valid";
+    
+    # Descendant operators (skipping ignorable nodes)
+    ok ASTQuery::Grammar.parse('.call >> .int'), "'.call >> .int' (descendant skipping ignorable) syntax is valid";
+    
+    # Descendant operators (any depth)
+    ok ASTQuery::Grammar.parse('.call >>> .int'), "'.call >>> .int' (descendant any depth) syntax is valid";
+    
+    # Parent operators
+    ok ASTQuery::Grammar.parse('.int < .call'), "'.int < .call' (direct parent) syntax is valid";
+    
+    # Ancestor operators (skipping ignorable nodes)
+    ok ASTQuery::Grammar.parse('.int << .call'), "'.int << .call' (ancestor skipping ignorable) syntax is valid";
+    
+    # Ancestor operators (any depth)
+    ok ASTQuery::Grammar.parse('.int <<< .call'), "'.int <<< .call' (ancestor any depth) syntax is valid";
+}
+
+# Test named capture patterns
+subtest 'Named capture syntax' => {
+    ok ASTQuery::Grammar.parse('.call$mycall'), "'.call\$mycall' named capture syntax is valid";
+    ok ASTQuery::Grammar.parse('.call >> .int$myint'), "'.call >> .int\$myint' descendant capture syntax is valid";
+    ok ASTQuery::Grammar.parse('$name'), "'\$name' simple capture syntax is valid";
+}
+
+# Test complex examples from copilot instructions
+subtest 'Complex syntax patterns' => {
+    # Multi-attribute matching
+    ok ASTQuery::Grammar.parse('.apply-op[left=1, right=3]'), "Multi-attribute matching syntax is valid";
+    
+    # Complex relationship with captures and IDs
+    ok ASTQuery::Grammar.parse('RakuAST::Infix <<< .conditional$cond .int#2$int'), 
+        "Complex relationship pattern syntax is valid";
+    
+    # Mixed patterns
+    ok ASTQuery::Grammar.parse('.call[name] >> .int[value=42]$captured'), 
+        "Mixed attribute and capture pattern is valid";
+}
+
+# Test CLI tool usage patterns (these are the actual patterns users would type)
+subtest 'CLI usage patterns from documentation' => {
+    # Query specific directory for patterns
+    ok ASTQuery::Grammar.parse('RakuAST::IntLiteral'), "CLI: Basic class name pattern";
+    
+    # Query for method calls
+    ok ASTQuery::Grammar.parse('.call'), "CLI: Basic group pattern";
+    
+    # Query with attribute matching
+    ok ASTQuery::Grammar.parse('.int[value=42]'), "CLI: Attribute matching pattern";
+    
+    # Query with relationship operators
+    ok ASTQuery::Grammar.parse('.call >> .int'), "CLI: Relationship pattern";
+}
+
+# Test error conditions - patterns that should NOT parse
+subtest 'Invalid syntax patterns' => {
+    # Missing closing bracket
+    nok ASTQuery::Grammar.parse('.int[value=42'), "Missing closing bracket should fail";
+    
+    # Invalid relationship operator
+    nok ASTQuery::Grammar.parse('.call >>>> .int'), "Invalid relationship operator should fail";
+    
+    # Invalid capture syntax
+    nok ASTQuery::Grammar.parse('.call$'), "Empty capture name should fail";
+}
+
+# Test boundary conditions
+subtest 'Boundary conditions' => {
+    # Empty query
+    nok ASTQuery::Grammar.parse(''), "Empty query should fail";
+    
+    # Whitespace handling
+    ok ASTQuery::Grammar.parse(' .int '), "Whitespace around simple query should work";
+    ok ASTQuery::Grammar.parse('.call > .int'), "Whitespace around operators should work";
+    
+    # Very long class names
+    ok ASTQuery::Grammar.parse('RakuAST::Statement::Expression::Call::Name::WithoutParentheses'), 
+        "Very long class names should parse";
+}
+
+done-testing;
