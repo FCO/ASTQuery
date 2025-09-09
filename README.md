@@ -81,6 +81,85 @@ Components:
 
 Note: Use only one $name per node.
 
+Available Groups
+----------------
+
+ASTQuery provides comprehensive groups to categorize RakuAST types:
+
+**Core Categories:**
+  * `.statement` - All statement types, blocks, and control structures (46 types)
+  * `.expression` - Infix, prefix, postfix operations and expressions (13 types)  
+  * `.literal` - All literal values: int, str, num, complex, version, etc. (8 types)
+  * `.declaration` - Classes, roles, subs, vars, packages, etc. (23 types)
+
+**Specialized Categories:**
+  * `.regex` - All regex-related nodes and constructs (92 types)
+  * `.data` - Arrays, hashes, pairs, argument lists, etc. (21 types)
+  * `.code` - Routines, methods, blocks, thunks, etc. (18 types)
+  * `.type` - Type definitions, traits, coercions, etc. (22 types)
+  * `.var` - All variable types and declarations (20 types)
+
+**Control Flow:**
+  * `.control` - Flow control statements like if/unless/when (6 types)
+  * `.conditional` - Conditional statements and expressions (6 types)
+  * `.iterable` - Loops and iteration constructs (4 types)
+
+**Language Features:**
+  * `.phaser` - BEGIN, END, and other phaser blocks (22 types)
+  * `.prefix` - Statement prefixes and prefix operators (20 types)
+  * `.postfix` - Postfix operators and constructs (5 types)
+  * `.parameter` - Parameters and parameter targets (6 types)
+
+**Meta and Utility:**
+  * `.meta` - Meta-programming constructs (5 types)
+  * `.metainfix` - Meta-infix operators like hyper, cross, etc. (8 types)
+  * `.initializer` - Assignment and initialization constructs (6 types)
+  * `.doc` - Documentation and pragma nodes (8 types)
+  * `.compile` - Compilation units and compile-time constructs (8 types)
+  * `.special` - Terms, stubs, and specialized nodes (29 types)
+
+**Convenience Groups:**
+  * `.call` - Call expressions
+  * `.int` - Integer literals
+  * `.str` - String literals  
+  * `.op` - All operator types
+  * `.apply-op` - Applied operations
+  * `.ignorable` - Nodes skipped by `>>` and `<<` operators
+
+Common ID Attributes
+--------------------
+
+The `#id` syntax provides access to key identifying attributes:
+
+**Values and Content:**
+  * `#value` - For all literal types (IntLiteral, StrLiteral, etc.)
+  * `#text` - For regex literals and quoted content
+  * `#literal` - For quoted strings
+
+**Names and Identifiers:**
+  * `#name` - For declarations, calls, methods, classes, packages, etc.
+  * `#simple-identifier` - For basic names
+  * `#desigilname` - For variable names without sigils
+
+**Operators and Operations:**
+  * `#operator` - For infix, prefix, postfix operators
+  * `#infix` - For infix operations and applications
+  * `#prefix` - For prefix applications  
+  * `#postfix` - For postfix applications
+  * `#function` - For function infix operations
+
+**Control Flow:**
+  * `#condition` - For conditionals, loops, and control statements
+  * `#topic` - For given statements
+  * `#source` - For iteration sources
+
+**Structure:**
+  * `#key` - For pairs and named arguments
+  * `#target` - For parameters
+  * `#type` - For traits and type specifications
+  * `#args` - For argument lists
+  * `#expression` - For expression statements
+
 Operators
 ---------
 

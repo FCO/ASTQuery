@@ -752,6 +752,8 @@ my %groups is Map = (
 	],
 	var => [
 		RakuAST::Var,
+		RakuAST::VarDeclaration,
+		RakuAST::VarDeclaration::Simple,
 		RakuAST::Var::Attribute,
 		RakuAST::Var::Attribute::Public,
 		RakuAST::Var::Compiler,
