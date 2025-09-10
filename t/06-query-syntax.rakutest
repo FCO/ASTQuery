@@ -5,6 +5,33 @@ use ASTQuery::Matcher;
 
 plan 10; # Comprehensive query syntax tests with validation
 
+# Helper function to safely compare values, handling Nil cases
+sub safe-value-eq($elem, $expected) {
+    return False unless $elem.can('value');
+    my $actual = $elem.value;
+    
+    # Handle the case where we're explicitly testing for Nil
+    if !$expected.defined {
+        return !$actual.defined;
+    }
+    
+    # Handle normal defined value comparisons
+    return $actual.defined && $actual eq $expected;
+}
+
+sub safe-value-equals($elem, $expected) {
+    return False unless $elem.can('value');
+    my $actual = $elem.value;
+    
+    # Handle the case where we're explicitly testing for Nil
+    if !$expected.defined {
+        return !$actual.defined;
+    }
+    
+    # Handle normal defined value comparisons  
+    return $actual.defined && $actual == $expected;
+}
+
 # Create sample AST for testing
 my $sample-code = q{
     my $x = 42;
@@ -84,12 +111,12 @@ subtest "Basic ID queries", {
     # Test #42 (integer literal)
     my $int42-result = $ast.&ast-query('#42');
     ok $int42-result.list.elems > 0, "Found integer 42 with #42 query";
-    ok $int42-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element has correct value 42";
+    ok $int42-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element has correct value 42";
     
     # Test #"hello" (string literal)
     my $hello-result = $ast.&ast-query('#"hello"');
     ok $hello-result.list.elems > 0, "Found string 'hello' with #\"hello\" query";
-    ok $hello-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "Found element has correct value 'hello'";
+    ok $hello-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "Found element has correct value 'hello'";
     
     # Test #say (call name)
     my $say-result = $ast.&ast-query('#say');
@@ -129,12 +156,12 @@ subtest "Combined group and ID queries", {
     # Test .int#42 (specific integer)
     my $int42-result = $ast.&ast-query('.int#42');
     ok $int42-result.list.elems > 0, "Found integer 42 with .int#42 query";
-    ok $int42-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Integer value is 42";
+    ok $int42-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Integer value is 42";
     
     # Test .str#"hello" (specific string)
     my $hello-result = $ast.&ast-query('.str#"hello"');
     ok $hello-result.list.elems > 0, "Found string 'hello' with .str#\"hello\" query";
-    ok $hello-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "String value is 'hello'";
+    ok $hello-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "String value is 'hello'";
     
     # Test .call#say (specific call)
     my $say-result = $ast.&ast-query('.call#say');
@@ -204,7 +231,7 @@ subtest "Descendant queries with IDs", {
     # Test .iterable >>> #2 (literal 2 inside loops)
     my $iter-2-result = $ast.&ast-query('.iterable >>> #2');
     ok $iter-2-result.list.elems > 0, "Found literal 2 inside loops with .iterable >>> #2";
-    ok $iter-2-result.list.grep(*.can('value') && *.value == 2).elems > 0, "Found element has correct value 2 inside a loop";
+    ok $iter-2-result.list.grep(safe-value-equals(*, 2)).elems > 0, "Found element has correct value 2 inside a loop";
     
     # Test .code >>> #data (parameter 'data' inside code)
     my $code-data-result = $ast.&ast-query('.code >>> #data');
@@ -214,7 +241,7 @@ subtest "Descendant queries with IDs", {
     # Test #process >>> #1 (literal 1 inside process routine)
     my $process-1-result = $ast.&ast-query('#process >>> #1');
     ok $process-1-result.list.elems > 0, "Found literal 1 inside process with #process >>> #1";
-    ok $process-1-result.list.grep(*.can('value') && *.value == 1).elems > 0, "Found element has correct value 1 inside process routine";
+    ok $process-1-result.list.grep(safe-value-equals(*, 1)).elems > 0, "Found element has correct value 1 inside process routine";
 };
 
 # Test child queries
@@ -382,7 +409,7 @@ subtest "Attribute queries", {
     my $value42-attr-result = $ast.&ast-query('[value=42]');
     ok $value42-attr-result.list.elems >= 0, "Attribute query [value=42] executed";
     if $value42-attr-result.list.elems > 0 {
-        ok $value42-attr-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element actually has value 42";
+        ok $value42-attr-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element actually has value 42";
     } else {
         pass "No elements with value=42 found (acceptable)";
     }

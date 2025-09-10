@@ -4,6 +4,33 @@ use ASTQuery;
 
 plan 15; # Basic query syntax validation tests
 
+# Helper function to safely compare values, handling Nil cases
+sub safe-value-eq($elem, $expected) {
+    return False unless $elem.can('value');
+    my $actual = $elem.value;
+    
+    # Handle the case where we're explicitly testing for Nil
+    if !$expected.defined {
+        return !$actual.defined;
+    }
+    
+    # Handle normal defined value comparisons
+    return $actual.defined && $actual eq $expected;
+}
+
+sub safe-value-equals($elem, $expected) {
+    return False unless $elem.can('value');
+    my $actual = $elem.value;
+    
+    # Handle the case where we're explicitly testing for Nil
+    if !$expected.defined {
+        return !$actual.defined;
+    }
+    
+    # Handle normal defined value comparisons  
+    return $actual.defined && $actual == $expected;
+}
+
 # Simple test cases with minimal code samples
 # These tests focus on verifying that the query syntax works correctly
 # with the most common patterns
@@ -22,12 +49,12 @@ subtest "Integer literal queries", {
     # Test ID query for specific value
     my $int42-result = $ast.&ast-query('#42');
     ok $int42-result.list.elems > 0, "Found value 42 with #42 ID query";
-    ok $int42-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element has correct value 42";
+    ok $int42-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element has correct value 42";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.int#42');
     ok $combined-result.list.elems > 0, "Found integer 42 with .int#42 combined query";
-    ok $combined-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Combined query found correct integer with value 42";
+    ok $combined-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Combined query found correct integer with value 42";
 };
 
 subtest "String literal queries", {
@@ -44,12 +71,12 @@ subtest "String literal queries", {
     # Test ID query for specific string
     my $hello-result = $ast.&ast-query('#"hello"');
     ok $hello-result.list.elems > 0, "Found string 'hello' with #\"hello\" ID query";
-    ok $hello-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "Found element has correct value 'hello'";
+    ok $hello-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "Found element has correct value 'hello'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.str#"hello"');
     ok $combined-result.list.elems > 0, "Found string 'hello' with .str#\"hello\" combined query";
-    ok $combined-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "Combined query found correct string with value 'hello'";
+    ok $combined-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "Combined query found correct string with value 'hello'";
 };
 
 subtest "Variable queries", {
@@ -293,7 +320,7 @@ subtest "Attribute-based queries", {
     my $value42-attr-result = $ast.&ast-query('[value=42]');
     ok $value42-attr-result.list.elems >= 0, "Specific attribute query [value=42] executed";
     if $value42-attr-result.list.elems > 0 {
-        ok $value42-attr-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element actually has value 42";
+        ok $value42-attr-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element actually has value 42";
     } else {
         pass "No elements with value=42 found (acceptable)";
     }
@@ -351,7 +378,7 @@ subtest "Combination syntax queries", {
 };
 
 subtest "Error handling and edge cases", {
-    plan 3;
+    plan 4;
     
     my $code = q{my $x = 1;};
     my $ast = $code.AST;
@@ -367,6 +394,15 @@ subtest "Error handling and edge cases", {
     # Test complex query with non-matches
     my $no-match-result = $ast.&ast-query('.conditional >>> .call');
     is $no-match-result.list.elems, 0, "Query with no matches returns empty result";
+    
+    # Test that our validation properly handles Nil values
+    # (This tests the safe-value-equals function with Nil)
+    my $nil-test-elem = class MockElement {
+        method can($method) { $method eq 'value' }
+        method value() { Nil }
+    }.new;
+    
+    ok safe-value-equals($nil-test-elem, Nil), "Validation properly handles Nil values";
 };
 
 done-testing;
