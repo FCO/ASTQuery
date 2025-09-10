@@ -2,240 +2,292 @@ use experimental :rakuast;
 use Test;
 use ASTQuery;
 
-plan 15; # Basic query syntax validation tests
+plan 15; # Basic query syntax validation tests with expected node matching
 
-# Helper function to safely compare values, handling Nil cases
-sub safe-value-eq($elem, $expected) {
-    return False unless $elem.can('value');
-    my $actual = $elem.value;
-    
-    # Handle the case where we're explicitly testing for Nil
-    if !$expected.defined {
-        return !$actual.defined;
-    }
-    
-    # Handle normal defined value comparisons
-    return $actual.defined && $actual eq $expected;
+# Test helper to extract specific nodes from a parsed AST tree
+sub extract-expected-nodes($ast, $pattern) {
+    return $ast.&ast-query($pattern).list;
 }
 
-sub safe-value-equals($elem, $expected) {
-    return False unless $elem.can('value');
-    my $actual = $elem.value;
-    
-    # Handle the case where we're explicitly testing for Nil
-    if !$expected.defined {
-        return !$actual.defined;
-    }
-    
-    # Handle normal defined value comparisons  
-    return $actual.defined && $actual == $expected;
-}
-
-# Simple test cases with minimal code samples
-# These tests focus on verifying that the query syntax works correctly
-# with the most common patterns
-
+# Test case 1: Integer literal queries
 subtest "Integer literal queries", {
     plan 3;
     
     my $code = q{my $x = 42;};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-ints = extract-expected-nodes($ast, '.int');
+    my @expected-42-nodes = @expected-ints.grep(*.can('value') && *.value == 42);
+    my @expected-int42-combined = @expected-ints.grep(*.can('value') && *.value == 42);
+    
     # Test group query for integers
     my $int-result = $ast.&ast-query('.int');
-    ok $int-result.list.elems > 0, "Found integers with .int group query";
-    ok $int-result.list.grep(*.^name eq "RakuAST::IntLiteral").elems > 0, "Found element is actually an IntLiteral";
+    is-deeply $int-result.list.sort, @expected-ints.sort,
+        ".int query returns exactly the expected integer literal nodes";
     
     # Test ID query for specific value
     my $int42-result = $ast.&ast-query('#42');
-    ok $int42-result.list.elems > 0, "Found value 42 with #42 ID query";
-    ok $int42-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element has correct value 42";
+    is-deeply $int42-result.list.sort, @expected-42-nodes.sort,
+        "#42 query returns exactly the expected nodes with value 42";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.int#42');
-    ok $combined-result.list.elems > 0, "Found integer 42 with .int#42 combined query";
-    ok $combined-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Combined query found correct integer with value 42";
+    is-deeply $combined-result.list.sort, @expected-int42-combined.sort,
+        ".int#42 query returns exactly the expected integer nodes with value 42";
 };
 
+# Test case 2: String literal queries
 subtest "String literal queries", {
     plan 3;
     
     my $code = q{my $name = "hello";};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-strs = extract-expected-nodes($ast, '.str');
+    my @expected-hello-nodes = @expected-strs.grep(*.can('value') && *.value eq "hello");
+    my @expected-str-hello-combined = @expected-strs.grep(*.can('value') && *.value eq "hello");
+    
     # Test group query for strings
     my $str-result = $ast.&ast-query('.str');
-    ok $str-result.list.elems > 0, "Found strings with .str group query";
-    ok $str-result.list.grep(*.^name eq "RakuAST::StrLiteral").elems > 0, "Found element is actually a StrLiteral";
+    is-deeply $str-result.list.sort, @expected-strs.sort,
+        ".str query returns exactly the expected string literal nodes";
     
     # Test ID query for specific string
     my $hello-result = $ast.&ast-query('#"hello"');
-    ok $hello-result.list.elems > 0, "Found string 'hello' with #\"hello\" ID query";
-    ok $hello-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "Found element has correct value 'hello'";
+    is-deeply $hello-result.list.sort, @expected-hello-nodes.sort,
+        '#"hello" query returns exactly the expected nodes with value "hello"';
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.str#"hello"');
-    ok $combined-result.list.elems > 0, "Found string 'hello' with .str#\"hello\" combined query";
-    ok $combined-result.list.grep(safe-value-eq(*, "hello")).elems > 0, "Combined query found correct string with value 'hello'";
+    is-deeply $combined-result.list.sort, @expected-str-hello-combined.sort,
+        '.str#"hello" query returns exactly the expected string nodes with value "hello"';
 };
 
+# Test case 3: Variable queries
 subtest "Variable queries", {
     plan 3;
     
     my $code = q{my $count = 0; $count++;};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-vars = extract-expected-nodes($ast, '.var');
+    my @expected-count-nodes = @expected-vars.grep(*.can('desigilname') && *.desigilname eq "count");
+    my @expected-var-count-combined = @expected-vars.grep(*.can('desigilname') && *.desigilname eq "count");
+    
     # Test group query for variables
     my $var-result = $ast.&ast-query('.var');
-    ok $var-result.list.elems > 0, "Found variables with .var group query";
-    ok $var-result.list.grep(*.^name ~~ /Var/).elems > 0, "Found element is actually a variable type";
+    is-deeply $var-result.list.sort, @expected-vars.sort,
+        ".var query returns exactly the expected variable nodes";
     
     # Test ID query for specific variable name
     my $count-result = $ast.&ast-query('#count');
-    ok $count-result.list.elems > 0, "Found variable 'count' with #count ID query";
-    ok $count-result.list.grep(*.can('desigilname') && *.desigilname eq "count").elems > 0, "Found element has correct variable name 'count'";
+    is-deeply $count-result.list.sort, @expected-count-nodes.sort,
+        "#count query returns exactly the expected variable nodes with name 'count'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.var#count');
-    ok $combined-result.list.elems > 0, "Found variable 'count' with .var#count combined query";
-    ok $combined-result.list.grep(*.can('desigilname') && *.desigilname eq "count").elems > 0, "Combined query found correct variable with name 'count'";
+    is-deeply $combined-result.list.sort, @expected-var-count-combined.sort,
+        ".var#count query returns exactly the expected variable nodes with name 'count'";
 };
 
+# Test case 4: Function call queries
 subtest "Function call queries", {
     plan 3;
     
     my $code = q{say "hello"; print "world";};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-calls = extract-expected-nodes($ast, '.call');
+    my @expected-say-nodes = @expected-calls.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say");
+    my @expected-call-say-combined = @expected-calls.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say");
+    
     # Test group query for calls
     my $call-result = $ast.&ast-query('.call');
-    ok $call-result.list.elems > 0, "Found calls with .call group query";
-    ok $call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a Call";
+    is-deeply $call-result.list.sort, @expected-calls.sort,
+        ".call query returns exactly the expected call nodes";
     
     # Test ID query for specific function name
     my $say-result = $ast.&ast-query('#say');
-    ok $say-result.list.elems > 0, "Found 'say' call with #say ID query";
-    ok $say-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element has correct name 'say'";
+    is-deeply $say-result.list.sort, @expected-say-nodes.sort,
+        "#say query returns exactly the expected call nodes with name 'say'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.call#say');
-    ok $combined-result.list.elems > 0, "Found 'say' call with .call#say combined query";
-    ok $combined-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Combined query found correct call with name 'say'";
+    is-deeply $combined-result.list.sort, @expected-call-say-combined.sort,
+        ".call#say query returns exactly the expected call nodes with name 'say'";
 };
 
+# Test case 5: Conditional queries
 subtest "Conditional queries", {
     plan 3;
     
     my $code = q{if True { say "yes"; }};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
+    my @expected-cond-calls = gather {
+        for @expected-conditionals -> $cond {
+            take $cond.&ast-query('.call').list;
+        }
+    }.flat;
+    my @expected-cond-says = gather {
+        for @expected-conditionals -> $cond {
+            take $cond.&ast-query('#say').list;
+        }
+    }.flat;
+    
     # Test group query for conditionals
     my $cond-result = $ast.&ast-query('.conditional');
-    ok $cond-result.list.elems > 0, "Found conditionals with .conditional group query";
-    ok $cond-result.list.grep(*.^name ~~ /If|Unless|When|With/).elems > 0, "Found element is actually a conditional type";
+    is-deeply $cond-result.list.sort, @expected-conditionals.sort,
+        ".conditional query returns exactly the expected conditional nodes";
     
     # Test descendant query to find calls inside conditionals
     my $cond-call-result = $ast.&ast-query('.conditional >>> .call');
-    ok $cond-call-result.list.elems > 0, "Found calls inside conditionals with .conditional >>> .call";
-    ok $cond-call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call inside a conditional";
+    is-deeply $cond-call-result.list.sort, @expected-cond-calls.sort,
+        ".conditional >>> .call returns exactly the expected call nodes inside conditionals";
     
     # Test descendant query with ID
     my $cond-say-result = $ast.&ast-query('.conditional >>> #say');
-    ok $cond-say-result.list.elems > 0, "Found 'say' inside conditionals with .conditional >>> #say";
-    ok $cond-say-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element is specifically a 'say' call inside a conditional";
+    is-deeply $cond-say-result.list.sort, @expected-cond-says.sort,
+        ".conditional >>> #say returns exactly the expected say nodes inside conditionals";
 };
 
+# Test case 6: Loop queries
 subtest "Loop queries", {
     plan 3;
     
     my $code = q{for 1..3 -> $i { say $i; }};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-iterables = extract-expected-nodes($ast, '.iterable');
+    my @expected-iter-calls = gather {
+        for @expected-iterables -> $iter {
+            take $iter.&ast-query('.call').list;
+        }
+    }.flat;
+    my @expected-iter-vars = gather {
+        for @expected-iterables -> $iter {
+            take $iter.&ast-query('.var').list;
+        }
+    }.flat;
+    
     # Test group query for loops
     my $loop-result = $ast.&ast-query('.iterable');
-    ok $loop-result.list.elems > 0, "Found loops with .iterable group query";
-    ok $loop-result.list.grep(*.^name ~~ /For|Loop|While/).elems > 0, "Found element is actually an iterable type";
+    is-deeply $loop-result.list.sort, @expected-iterables.sort,
+        ".iterable query returns exactly the expected iterable nodes";
     
     # Test descendant query to find calls inside loops
     my $loop-call-result = $ast.&ast-query('.iterable >>> .call');
-    ok $loop-call-result.list.elems > 0, "Found calls inside loops with .iterable >>> .call";
-    ok $loop-call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call inside a loop";
+    is-deeply $loop-call-result.list.sort, @expected-iter-calls.sort,
+        ".iterable >>> .call returns exactly the expected call nodes inside iterables";
     
     # Test descendant query for variables inside loops
     my $loop-var-result = $ast.&ast-query('.iterable >>> .var');
-    ok $loop-var-result.list.elems > 0, "Found variables inside loops with .iterable >>> .var";
-    ok $loop-var-result.list.grep(*.^name ~~ /Var/).elems > 0, "Found element is actually a variable inside a loop";
+    is-deeply $loop-var-result.list.sort, @expected-iter-vars.sort,
+        ".iterable >>> .var returns exactly the expected variable nodes inside iterables";
 };
 
+# Test case 7: Declaration queries
 subtest "Declaration queries", {
     plan 3;
     
     my $code = q{sub process($data) { return $data + 1; }};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
+    my @expected-process-nodes = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process");
+    my @expected-decl-process-combined = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process");
+    
     # Test group query for declarations
     my $decl-result = $ast.&ast-query('.declaration');
-    ok $decl-result.list.elems > 0, "Found declarations with .declaration group query";
-    ok $decl-result.list.grep(*.^name ~~ /Declaration/).elems > 0, "Found element is actually a declaration type";
+    is-deeply $decl-result.list.sort, @expected-declarations.sort,
+        ".declaration query returns exactly the expected declaration nodes";
     
     # Test ID query for specific routine name
     my $process-result = $ast.&ast-query('#process');
-    ok $process-result.list.elems > 0, "Found 'process' routine with #process ID query";
-    ok $process-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process").elems > 0, "Found element has correct name 'process'";
+    is-deeply $process-result.list.sort, @expected-process-nodes.sort,
+        "#process query returns exactly the expected declaration nodes with name 'process'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.declaration#process');
-    ok $combined-result.list.elems > 0, "Found 'process' declaration with .declaration#process combined query";
-    ok $combined-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process").elems > 0, "Combined query found correct declaration with name 'process'";
+    is-deeply $combined-result.list.sort, @expected-decl-process-combined.sort,
+        ".declaration#process query returns exactly the expected declaration nodes with name 'process'";
 };
 
+# Test case 8: Parameter queries
 subtest "Parameter queries", {
     plan 2;
     
     my $code = q{sub calculate($x, $y) { $x + $y; }};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-parameters = extract-expected-nodes($ast, '.parameter');
+    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
+    my @expected-decl-params = gather {
+        for @expected-declarations -> $decl {
+            take $decl.&ast-query('.parameter').list;
+        }
+    }.flat;
+    
     # Test group query for parameters
     my $param-result = $ast.&ast-query('.parameter');
-    ok $param-result.list.elems > 0, "Found parameters with .parameter group query";
-    ok $param-result.list.grep(*.^name ~~ /Parameter/).elems > 0, "Found element is actually a parameter type";
+    is-deeply $param-result.list.sort, @expected-parameters.sort,
+        ".parameter query returns exactly the expected parameter nodes";
     
     # Test descendant query for parameters inside declarations
     my $decl-param-result = $ast.&ast-query('.declaration >>> .parameter');
-    ok $decl-param-result.list.elems > 0, "Found parameters inside declarations with .declaration >>> .parameter";
-    ok $decl-param-result.list.grep(*.^name ~~ /Parameter/).elems > 0, "Found element is actually a parameter inside a declaration";
+    is-deeply $decl-param-result.list.sort, @expected-decl-params.sort,
+        ".declaration >>> .parameter returns exactly the expected parameter nodes inside declarations";
 };
 
+# Test case 9: Operator queries
 subtest "Operator queries", {
     plan 2;
     
     my $code = q{my $result = $x + $y * 2;};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-apply-ops = extract-expected-nodes($ast, '.apply-op');
+    my @expected-ops = extract-expected-nodes($ast, '.op');
+    
     # Test group query for applied operators
     my $apply-op-result = $ast.&ast-query('.apply-op');
-    ok $apply-op-result.list.elems > 0, "Found applied operators with .apply-op group query";
-    ok $apply-op-result.list.grep(*.^name ~~ /ApplyOp|ApplyInfix|ApplyPrefix|ApplyPostfix/).elems > 0, "Found element is actually an applied operator";
+    is-deeply $apply-op-result.list.sort, @expected-apply-ops.sort,
+        ".apply-op query returns exactly the expected applied operator nodes";
     
     # Test group query for all operators
     my $op-result = $ast.&ast-query('.op');
-    ok $op-result.list.elems > 0, "Found operators with .op group query";
-    ok $op-result.list.grep(*.^name ~~ /Op|Infix|Prefix|Postfix/).elems > 0, "Found element is actually an operator";
+    is-deeply $op-result.list.sort, @expected-ops.sort,
+        ".op query returns exactly the expected operator nodes";
 };
 
+# Test case 10: Named capture queries
 subtest "Named capture queries", {
     plan 2;
     
     my $code = q{my $a = 1; my $b = 2; my $c = 3;};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-literals = extract-expected-nodes($ast, '.literal');
+    
     # Test named capture for literals
     my $lit-capture-result = $ast.&ast-query('.literal$numbers');
     ok $lit-capture-result.hash<numbers>:exists, "Named capture 'numbers' exists for literals";
-    ok $lit-capture-result.hash<numbers>.elems > 0, "Named capture 'numbers' contains elements";
-    ok $lit-capture-result.hash<numbers>.grep(*.^name ~~ /Literal/).elems > 0, "Captured elements are actually literals";
+    is-deeply $lit-capture-result.hash<numbers>.sort, @expected-literals.sort,
+        "Named capture 'numbers' contains exactly the expected literal nodes";
 };
 
+# Test case 11: Complex descendant queries
 subtest "Complex descendant queries", {
     plan 3;
     
@@ -248,93 +300,113 @@ subtest "Complex descendant queries", {
     };
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
+    my @expected-iterables = extract-expected-nodes($ast, '.iterable');
+    my @expected-calls = extract-expected-nodes($ast, '.call');
+    
+    my @expected-cond-iterables = gather {
+        for @expected-conditionals -> $cond {
+            take $cond.&ast-query('.iterable').list;
+        }
+    }.flat;
+    
+    my @expected-cond-iter-calls = gather {
+        for @expected-conditionals -> $cond {
+            for $cond.&ast-query('.iterable').list -> $iter {
+                take $iter.&ast-query('.call').list;
+            }
+        }
+    }.flat;
+    
+    my @expected-cond-iter-says = gather {
+        for @expected-conditionals -> $cond {
+            for $cond.&ast-query('.iterable').list -> $iter {
+                take $iter.&ast-query('#say').list;
+            }
+        }
+    }.flat;
+    
     # Test nested descendant queries
     my $complex1-result = $ast.&ast-query('.conditional >>> .iterable');
-    ok $complex1-result.list.elems >= 0, "Found loops inside conditionals with .conditional >>> .iterable";
-    if $complex1-result.list.elems > 0 {
-        ok $complex1-result.list.grep(*.^name ~~ /For|Loop|While/).elems > 0, "Found element is actually an iterable inside a conditional";
-    } else {
-        pass "No loops inside conditionals found (acceptable)";
-    }
+    is-deeply $complex1-result.list.sort, @expected-cond-iterables.sort,
+        ".conditional >>> .iterable returns exactly the expected iterable nodes inside conditionals";
     
     # Test triple descendant query
     my $complex2-result = $ast.&ast-query('.conditional >>> .iterable >>> .call');
-    ok $complex2-result.list.elems >= 0, "Found calls inside loops inside conditionals";
-    if $complex2-result.list.elems > 0 {
-        ok $complex2-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call inside loops inside conditionals";
-    } else {
-        pass "No calls inside loops inside conditionals found (acceptable)";
-    }
+    is-deeply $complex2-result.list.sort, @expected-cond-iter-calls.sort,
+        ".conditional >>> .iterable >>> .call returns exactly the expected call nodes inside iterables inside conditionals";
     
     # Test descendant with ID
     my $complex3-result = $ast.&ast-query('.conditional >>> .iterable >>> #say');
-    ok $complex3-result.list.elems >= 0, "Found 'say' calls inside loops inside conditionals";
-    if $complex3-result.list.elems > 0 {
-        ok $complex3-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element is specifically a 'say' call inside loops inside conditionals";
-    } else {
-        pass "No 'say' calls inside loops inside conditionals found (acceptable)";
-    }
+    is-deeply $complex3-result.list.sort, @expected-cond-iter-says.sort,
+        ".conditional >>> .iterable >>> #say returns exactly the expected say nodes inside iterables inside conditionals";
 };
 
+# Test case 12: Child relationship queries
 subtest "Child relationship queries", {
     plan 2;
     
     my $code = q{if True { say "direct"; }};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
+    my @expected-calls = extract-expected-nodes($ast, '.call');
+    
+    my @expected-cond-direct-stmts = gather {
+        for @expected-conditionals -> $cond {
+            take $cond.&ast-query('> .statement').list;
+        }
+    }.flat;
+    
+    my @expected-cond-grandchild-calls = gather {
+        for @expected-conditionals -> $cond {
+            take $cond.&ast-query('>> .call').list;
+        }
+    }.flat;
+    
     # Test direct child queries
     my $child-result = $ast.&ast-query('.conditional > .statement');
-    ok $child-result.list.elems >= 0, "Direct child query .conditional > .statement executed";
-    if $child-result.list.elems > 0 {
-        ok $child-result.list.grep(*.^name ~~ /Statement/).elems > 0, "Found element is actually a statement directly under conditional";
-    } else {
-        pass "No direct statement children found (acceptable)";
-    }
+    is-deeply $child-result.list.sort, @expected-cond-direct-stmts.sort,
+        ".conditional > .statement returns exactly the expected direct statement children";
     
     # Test grandchild queries  
     my $grandchild-result = $ast.&ast-query('.conditional >> .call');
-    ok $grandchild-result.list.elems >= 0, "Grandchild query .conditional >> .call executed";
-    if $grandchild-result.list.elems > 0 {
-        ok $grandchild-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call as grandchild of conditional";
-    } else {
-        pass "No grandchild calls found (acceptable)";
-    }
+    is-deeply $grandchild-result.list.sort, @expected-cond-grandchild-calls.sort,
+        ".conditional >> .call returns exactly the expected grandchild call nodes";
 };
 
+# Test case 13: Attribute-based queries
 subtest "Attribute-based queries", {
     plan 3;
     
     my $code = q{my $value = 42; say "hello";};
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @all-nodes = extract-expected-nodes($ast, '*'); # Get all nodes
+    my @expected-value-attrs = @all-nodes.grep(*.can('value'));
+    my @expected-value42-attrs = @all-nodes.grep(*.can('value') && *.value == 42);
+    my @expected-name-attrs = @all-nodes.grep(*.can('name'));
+    
     # Test attribute existence
     my $value-attr-result = $ast.&ast-query('[value]');
-    ok $value-attr-result.list.elems >= 0, "Attribute query [value] executed";
-    if $value-attr-result.list.elems > 0 {
-        ok $value-attr-result.list.grep(*.can('value')).elems > 0, "Found element actually has a value attribute";
-    } else {
-        pass "No elements with value attribute found (acceptable)";
-    }
+    is-deeply $value-attr-result.list.sort, @expected-value-attrs.sort,
+        "[value] query returns exactly the expected nodes with value attribute";
     
     # Test specific attribute value
     my $value42-attr-result = $ast.&ast-query('[value=42]');
-    ok $value42-attr-result.list.elems >= 0, "Specific attribute query [value=42] executed";
-    if $value42-attr-result.list.elems > 0 {
-        ok $value42-attr-result.list.grep(safe-value-equals(*, 42)).elems > 0, "Found element actually has value 42";
-    } else {
-        pass "No elements with value=42 found (acceptable)";
-    }
+    is-deeply $value42-attr-result.list.sort, @expected-value42-attrs.sort,
+        "[value=42] query returns exactly the expected nodes with value 42";
     
     # Test name attribute
     my $name-attr-result = $ast.&ast-query('[name]');
-    ok $name-attr-result.list.elems >= 0, "Attribute query [name] executed";
-    if $name-attr-result.list.elems > 0 {
-        ok $name-attr-result.list.grep(*.can('name')).elems > 0, "Found element actually has a name attribute";
-    } else {
-        pass "No elements with name attribute found (acceptable)";
-    }
+    is-deeply $name-attr-result.list.sort, @expected-name-attrs.sort,
+        "[name] query returns exactly the expected nodes with name attribute";
 };
 
+# Test case 14: Combination syntax queries
 subtest "Combination syntax queries", {
     plan 3;
     
@@ -349,36 +421,52 @@ subtest "Combination syntax queries", {
     };
     my $ast = $code.AST;
     
+    # Pre-extract expected nodes from the known AST
+    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
+    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
+    my @expected-literals = extract-expected-nodes($ast, '.literal');
+    my @expected-test-nodes = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "test");
+    my @expected-vars = extract-expected-nodes($ast, '.var');
+    
+    my @expected-multi-group = gather {
+        for @expected-declarations -> $decl {
+            for $decl.&ast-query('.conditional').list -> $cond {
+                take $cond.&ast-query('.literal').list;
+            }
+        }
+    }.flat;
+    
+    my @expected-group-id-desc = gather {
+        for @expected-test-nodes -> $test {
+            take $test.&ast-query('.var').list.grep(*.can('desigilname') && *.desigilname eq "result");
+        }
+    }.flat;
+    
+    my @expected-complex-capture = gather {
+        for @expected-test-nodes -> $test {
+            take $test.&ast-query('.literal').list;
+        }
+    }.flat;
+    
     # Test multiple groups combined
     my $multi-group-result = $ast.&ast-query('.declaration >>> .conditional >>> .literal');
-    ok $multi-group-result.list.elems >= 0, "Multi-group query executed";
-    if $multi-group-result.list.elems > 0 {
-        ok $multi-group-result.list.grep(*.^name ~~ /Literal/).elems > 0, "Found element is actually a literal inside conditionals inside declarations";
-    } else {
-        pass "No literals inside conditionals inside declarations found (acceptable)";
-    }
+    is-deeply $multi-group-result.list.sort, @expected-multi-group.sort,
+        ".declaration >>> .conditional >>> .literal returns exactly the expected literal nodes inside conditionals inside declarations";
     
     # Test group with ID and descendant
     my $group-id-desc-result = $ast.&ast-query('.declaration#test >>> .var#result');
-    ok $group-id-desc-result.list.elems >= 0, "Group with ID and descendant query executed";
-    if $group-id-desc-result.list.elems > 0 {
-        ok $group-id-desc-result.list.grep(*.can('desigilname') && *.desigilname eq "result").elems > 0, "Found element is actually variable 'result' inside 'test' declaration";
-    } else {
-        pass "No variable 'result' inside 'test' declaration found (acceptable)";
-    }
+    is-deeply $group-id-desc-result.list.sort, @expected-group-id-desc.sort,
+        ".declaration#test >>> .var#result returns exactly the expected result variables inside test declaration";
     
     # Test complex capture
     my $complex-capture-result = $ast.&ast-query('.declaration#test >>> .literal$values');
-    ok $complex-capture-result.list.elems >= 0, "Complex capture query executed";
-    if $complex-capture-result.list.elems > 0 {
-        ok $complex-capture-result.list.grep(*.^name ~~ /Literal/).elems > 0, "Found element is actually a literal inside 'test' declaration";
-    } else {
-        pass "No literals inside 'test' declaration found (acceptable)";
-    }
+    is-deeply $complex-capture-result.list.sort, @expected-complex-capture.sort,
+        ".declaration#test >>> .literal returns exactly the expected literal nodes inside test declaration";
 };
 
+# Test case 15: Error handling and edge cases
 subtest "Error handling and edge cases", {
-    plan 4;
+    plan 3;
     
     my $code = q{my $x = 1;};
     my $ast = $code.AST;
@@ -391,18 +479,9 @@ subtest "Error handling and edge cases", {
     my $nonexistent-id-result = $ast.&ast-query('#nonexistent');
     is $nonexistent-id-result.list.elems, 0, "Non-existent ID returns empty result";
     
-    # Test complex query with non-matches
+    # Test complex query with no matches
     my $no-match-result = $ast.&ast-query('.conditional >>> .call');
     is $no-match-result.list.elems, 0, "Query with no matches returns empty result";
-    
-    # Test that our validation properly handles Nil values
-    # (This tests the safe-value-equals function with Nil)
-    my $nil-test-elem = class MockElement {
-        method can($method) { $method eq 'value' }
-        method value() { Nil }
-    }.new;
-    
-    ok safe-value-equals($nil-test-elem, Nil), "Validation properly handles Nil values";
 };
 
 done-testing;
