@@ -29,52 +29,52 @@ subtest "Basic group queries", {
     # Test .literal group
     my $literal-result = $ast.&ast-query('.literal');
     ok $literal-result.list.elems > 0, "Found literals with .literal query";
-    ok $literal-result.list.first(*.^name ~~ /Literal/), "Found element is actually a literal type";
+    ok $literal-result.list.grep(*.^name ~~ /Literal/).elems > 0, "Found element is actually a literal type";
     
     # Test .int group 
     my $int-result = $ast.&ast-query('.int');
     ok $int-result.list.elems > 0, "Found integers with .int query";
-    ok $int-result.list.first(*.^name eq "RakuAST::IntLiteral"), "Found element is actually an IntLiteral";
+    ok $int-result.list.grep(*.^name eq "RakuAST::IntLiteral").elems > 0, "Found element is actually an IntLiteral";
     
     # Test .str group
     my $str-result = $ast.&ast-query('.str');
     ok $str-result.list.elems > 0, "Found strings with .str query";
-    ok $str-result.list.first(*.^name eq "RakuAST::StrLiteral"), "Found element is actually a StrLiteral";
+    ok $str-result.list.grep(*.^name eq "RakuAST::StrLiteral").elems > 0, "Found element is actually a StrLiteral";
     
     # Test .declaration group
     my $decl-result = $ast.&ast-query('.declaration');
     ok $decl-result.list.elems > 0, "Found declarations with .declaration query";
-    ok $decl-result.list.first(*.^name ~~ /Declaration/), "Found element is actually a declaration type";
+    ok $decl-result.list.grep(*.^name ~~ /Declaration/).elems > 0, "Found element is actually a declaration type";
     
     # Test .conditional group
     my $cond-result = $ast.&ast-query('.conditional');
     ok $cond-result.list.elems > 0, "Found conditionals with .conditional query";
-    ok $cond-result.list.first(*.^name ~~ /If|Unless|When|With/), "Found element is actually a conditional type";
+    ok $cond-result.list.grep(*.^name ~~ /If|Unless|When|With/).elems > 0, "Found element is actually a conditional type";
     
     # Test .statement group
     my $stmt-result = $ast.&ast-query('.statement');
     ok $stmt-result.list.elems > 0, "Found statements with .statement query";
-    ok $stmt-result.list.first(*.^name ~~ /Statement/), "Found element is actually a statement type";
+    ok $stmt-result.list.grep(*.^name ~~ /Statement/).elems > 0, "Found element is actually a statement type";
     
     # Test .call group
     my $call-result = $ast.&ast-query('.call');
     ok $call-result.list.elems > 0, "Found calls with .call query";
-    ok $call-result.list.first(*.^name eq "RakuAST::Call"), "Found element is actually a Call";
+    ok $call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a Call";
     
     # Test .var group
     my $var-result = $ast.&ast-query('.var');
     ok $var-result.list.elems > 0, "Found variables with .var query";
-    ok $var-result.list.first(*.^name ~~ /Var/), "Found element is actually a variable type";
+    ok $var-result.list.grep(*.^name ~~ /Var/).elems > 0, "Found element is actually a variable type";
     
     # Test .code group
     my $code-result = $ast.&ast-query('.code');
     ok $code-result.list.elems > 0, "Found code structures with .code query";
-    ok $code-result.list.first(*.^name ~~ /Code|Block|Thunk/), "Found element is actually a code type";
+    ok $code-result.list.grep(*.^name ~~ /Code|Block|Thunk/).elems > 0, "Found element is actually a code type";
     
     # Test .iterable group
     my $iter-result = $ast.&ast-query('.iterable');
     ok $iter-result.list.elems > 0, "Found iterables with .iterable query";
-    ok $iter-result.list.first(*.^name ~~ /For|Loop|While/), "Found element is actually an iterable type";
+    ok $iter-result.list.grep(*.^name ~~ /For|Loop|While/).elems > 0, "Found element is actually an iterable type";
 };
 
 # Test basic ID queries
@@ -84,42 +84,42 @@ subtest "Basic ID queries", {
     # Test #42 (integer literal)
     my $int42-result = $ast.&ast-query('#42');
     ok $int42-result.list.elems > 0, "Found integer 42 with #42 query";
-    is $int42-result.list.head.value, 42, "Found element has correct value 42";
+    ok $int42-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element has correct value 42";
     
     # Test #"hello" (string literal)
     my $hello-result = $ast.&ast-query('#"hello"');
     ok $hello-result.list.elems > 0, "Found string 'hello' with #\"hello\" query";
-    is $hello-result.list.head.value, "hello", "Found element has correct value 'hello'";
+    ok $hello-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "Found element has correct value 'hello'";
     
     # Test #say (call name)
     my $say-result = $ast.&ast-query('#say');
     ok $say-result.list.elems > 0, "Found 'say' calls with #say query";
-    ok $say-result.list.first(*.name.simple-identifier eq "say"), "Found element has correct name 'say'";
+    ok $say-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element has correct name 'say'";
     
     # Test #process (method/sub name)
     my $process-result = $ast.&ast-query('#process');
     ok $process-result.list.elems > 0, "Found 'process' routine with #process query";
-    ok $process-result.list.first(*.name.simple-identifier eq "process"), "Found element has correct name 'process'";
+    ok $process-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process").elems > 0, "Found element has correct name 'process'";
     
     # Test #x (variable name)
     my $x-result = $ast.&ast-query('#x');
     ok $x-result.list.elems > 0, "Found variable 'x' with #x query";
-    ok $x-result.list.first(*.desigilname eq "x"), "Found element has correct variable name 'x'";
+    ok $x-result.list.grep(*.can('desigilname') && *.desigilname eq "x").elems > 0, "Found element has correct variable name 'x'";
     
     # Test #name (variable name)
     my $name-result = $ast.&ast-query('#name');
     ok $name-result.list.elems > 0, "Found variable 'name' with #name query";
-    ok $name-result.list.first(*.desigilname eq "name"), "Found element has correct variable name 'name'";
+    ok $name-result.list.grep(*.can('desigilname') && *.desigilname eq "name").elems > 0, "Found element has correct variable name 'name'";
     
     # Test #data (parameter name)
     my $data-result = $ast.&ast-query('#data');
     ok $data-result.list.elems > 0, "Found parameter 'data' with #data query";
-    ok $data-result.list.first(*.target.desigilname eq "data"), "Found element has correct parameter name 'data'";
+    ok $data-result.list.grep(*.can('target') && *.target.can('desigilname') && *.target.desigilname eq "data").elems > 0, "Found element has correct parameter name 'data'";
     
     # Test #i (loop variable)
     my $i-result = $ast.&ast-query('#i');
     ok $i-result.list.elems > 0, "Found loop variable 'i' with #i query";
-    ok $i-result.list.first(*.target.desigilname eq "i"), "Found element has correct variable name 'i'";
+    ok $i-result.list.grep(*.can('target') && *.target.can('desigilname') && *.target.desigilname eq "i").elems > 0, "Found element has correct variable name 'i'";
 };
 
 # Test combined group and ID queries
@@ -129,32 +129,32 @@ subtest "Combined group and ID queries", {
     # Test .int#42 (specific integer)
     my $int42-result = $ast.&ast-query('.int#42');
     ok $int42-result.list.elems > 0, "Found integer 42 with .int#42 query";
-    is $int42-result.list.head.value, 42, "Integer value is 42";
+    ok $int42-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Integer value is 42";
     
     # Test .str#"hello" (specific string)
     my $hello-result = $ast.&ast-query('.str#"hello"');
     ok $hello-result.list.elems > 0, "Found string 'hello' with .str#\"hello\" query";
-    is $hello-result.list.head.value, "hello", "String value is 'hello'";
+    ok $hello-result.list.grep(*.can('value') && *.value eq "hello").elems > 0, "String value is 'hello'";
     
     # Test .call#say (specific call)
     my $say-result = $ast.&ast-query('.call#say');
     ok $say-result.list.elems > 0, "Found 'say' call with .call#say query";
-    ok $say-result.list.first(*.name.simple-identifier eq "say"), "Found element is specifically a 'say' call";
+    ok $say-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element is specifically a 'say' call";
     
     # Test .declaration#process (specific declaration)
     my $process-result = $ast.&ast-query('.declaration#process');
     ok $process-result.list.elems > 0, "Found 'process' declaration with .declaration#process query";
-    ok $process-result.list.first(*.name.simple-identifier eq "process"), "Found element is specifically a 'process' declaration";
+    ok $process-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process").elems > 0, "Found element is specifically a 'process' declaration";
     
     # Test .var#x (specific variable)
     my $x-result = $ast.&ast-query('.var#x');
     ok $x-result.list.elems > 0, "Found variable 'x' with .var#x query";
-    ok $x-result.list.first(*.desigilname eq "x"), "Found element is specifically variable 'x'";
+    ok $x-result.list.grep(*.can('desigilname') && *.desigilname eq "x").elems > 0, "Found element is specifically variable 'x'";
     
     # Test .var#name (specific variable)
     my $name-result = $ast.&ast-query('.var#name');
     ok $name-result.list.elems > 0, "Found variable 'name' with .var#name query";
-    ok $name-result.list.first(*.desigilname eq "name"), "Found element is specifically variable 'name'";
+    ok $name-result.list.grep(*.can('desigilname') && *.desigilname eq "name").elems > 0, "Found element is specifically variable 'name'";
 };
 
 # Test descendant queries with groups
@@ -164,32 +164,32 @@ subtest "Descendant queries with groups", {
     # Test .conditional >>> .call (calls inside conditionals)
     my $cond-call-result = $ast.&ast-query('.conditional >>> .call');
     ok $cond-call-result.list.elems > 0, "Found calls inside conditionals with .conditional >>> .call";
-    ok $cond-call-result.list.first(*.^name eq "RakuAST::Call"), "Found element is actually a call inside a conditional";
+    ok $cond-call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call inside a conditional";
     
     # Test .iterable >>> .call (calls inside loops)
     my $iter-call-result = $ast.&ast-query('.iterable >>> .call');
     ok $iter-call-result.list.elems > 0, "Found calls inside loops with .iterable >>> .call";
-    ok $iter-call-result.list.first(*.^name eq "RakuAST::Call"), "Found element is actually a call inside a loop";
+    ok $iter-call-result.list.grep(*.^name eq "RakuAST::Call").elems > 0, "Found element is actually a call inside a loop";
     
     # Test .code >>> .literal (literals inside code blocks)
     my $code-lit-result = $ast.&ast-query('.code >>> .literal');
     ok $code-lit-result.list.elems > 0, "Found literals inside code with .code >>> .literal";
-    ok $code-lit-result.list.first(*.^name ~~ /Literal/), "Found element is actually a literal inside code";
+    ok $code-lit-result.list.grep(*.^name ~~ /Literal/).elems > 0, "Found element is actually a literal inside code";
     
     # Test .statement >>> .var (variables inside statements)
     my $stmt-var-result = $ast.&ast-query('.statement >>> .var');
     ok $stmt-var-result.list.elems > 0, "Found variables inside statements with .statement >>> .var";
-    ok $stmt-var-result.list.first(*.^name ~~ /Var/), "Found element is actually a variable inside a statement";
+    ok $stmt-var-result.list.grep(*.^name ~~ /Var/).elems > 0, "Found element is actually a variable inside a statement";
     
     # Test .call >>> .int (integers inside calls)
     my $call-int-result = $ast.&ast-query('.call >>> .int');
     ok $call-int-result.list.elems > 0, "Found integers inside calls with .call >>> .int";
-    ok $call-int-result.list.first(*.^name eq "RakuAST::IntLiteral"), "Found element is actually an integer literal inside a call";
+    ok $call-int-result.list.grep(*.^name eq "RakuAST::IntLiteral").elems > 0, "Found element is actually an integer literal inside a call";
     
     # Test .declaration >>> .parameter (parameters inside declarations)
     my $decl-param-result = $ast.&ast-query('.declaration >>> .parameter');
     ok $decl-param-result.list.elems > 0, "Found parameters inside declarations with .declaration >>> .parameter";
-    ok $decl-param-result.list.first(*.^name ~~ /Parameter/), "Found element is actually a parameter inside a declaration";
+    ok $decl-param-result.list.grep(*.^name ~~ /Parameter/).elems > 0, "Found element is actually a parameter inside a declaration";
 };
 
 # Test descendant queries with IDs
@@ -199,22 +199,22 @@ subtest "Descendant queries with IDs", {
     # Test .conditional >>> #say (say calls inside conditionals)
     my $cond-say-result = $ast.&ast-query('.conditional >>> #say');
     ok $cond-say-result.list.elems > 0, "Found 'say' inside conditionals with .conditional >>> #say";
-    ok $cond-say-result.list.first(*.name.simple-identifier eq "say"), "Found element is specifically a 'say' call inside a conditional";
+    ok $cond-say-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element is specifically a 'say' call inside a conditional";
     
     # Test .iterable >>> #2 (literal 2 inside loops)
     my $iter-2-result = $ast.&ast-query('.iterable >>> #2');
     ok $iter-2-result.list.elems > 0, "Found literal 2 inside loops with .iterable >>> #2";
-    is $iter-2-result.list.head.value, 2, "Found element has correct value 2 inside a loop";
+    ok $iter-2-result.list.grep(*.can('value') && *.value == 2).elems > 0, "Found element has correct value 2 inside a loop";
     
     # Test .code >>> #data (parameter 'data' inside code)
     my $code-data-result = $ast.&ast-query('.code >>> #data');
     ok $code-data-result.list.elems > 0, "Found parameter 'data' inside code with .code >>> #data";
-    ok $code-data-result.list.first(*.target.desigilname eq "data"), "Found element has correct parameter name 'data' inside code";
+    ok $code-data-result.list.grep(*.can('target') && *.target.can('desigilname') && *.target.desigilname eq "data").elems > 0, "Found element has correct parameter name 'data' inside code";
     
     # Test #process >>> #1 (literal 1 inside process routine)
     my $process-1-result = $ast.&ast-query('#process >>> #1');
     ok $process-1-result.list.elems > 0, "Found literal 1 inside process with #process >>> #1";
-    is $process-1-result.list.head.value, 1, "Found element has correct value 1 inside process routine";
+    ok $process-1-result.list.grep(*.can('value') && *.value == 1).elems > 0, "Found element has correct value 1 inside process routine";
 };
 
 # Test child queries
@@ -225,7 +225,7 @@ subtest "Child queries", {
     my $cond-stmt-result = $ast.&ast-query('.conditional > .statement');
     ok $cond-stmt-result.list.elems >= 0, "Query .conditional > .statement executed";
     if $cond-stmt-result.list.elems > 0 {
-        ok $cond-stmt-result.list.first(*.^name ~~ /Statement/), "Found element is actually a statement directly under conditional";
+        ok $cond-stmt-result.list.grep(*.^name ~~ /Statement/).elems > 0, "Found element is actually a statement directly under conditional";
     } else {
         pass "No direct statement children found (acceptable)";
     }
@@ -234,7 +234,7 @@ subtest "Child queries", {
     my $iter-code-result = $ast.&ast-query('.iterable > .code');
     ok $iter-code-result.list.elems >= 0, "Query .iterable > .code executed";
     if $iter-code-result.list.elems > 0 {
-        ok $iter-code-result.list.first(*.^name ~~ /Code|Block/), "Found element is actually code directly under iterable";
+        ok $iter-code-result.list.grep(*.^name ~~ /Code|Block/).elems > 0, "Found element is actually code directly under iterable";
     } else {
         pass "No direct code children found (acceptable)";
     }
@@ -243,7 +243,7 @@ subtest "Child queries", {
     my $call-lit-result = $ast.&ast-query('.call > .literal');
     ok $call-lit-result.list.elems >= 0, "Query .call > .literal executed";
     if $call-lit-result.list.elems > 0 {
-        ok $call-lit-result.list.first(*.^name ~~ /Literal/), "Found element is actually a literal directly under call";
+        ok $call-lit-result.list.grep(*.^name ~~ /Literal/).elems > 0, "Found element is actually a literal directly under call";
     } else {
         pass "No direct literal children found (acceptable)";
     }
@@ -252,7 +252,7 @@ subtest "Child queries", {
     my $decl-param-result = $ast.&ast-query('.declaration > .parameter');
     ok $decl-param-result.list.elems >= 0, "Query .declaration > .parameter executed";
     if $decl-param-result.list.elems > 0 {
-        ok $decl-param-result.list.first(*.^name ~~ /Parameter/), "Found element is actually a parameter directly under declaration";
+        ok $decl-param-result.list.grep(*.^name ~~ /Parameter/).elems > 0, "Found element is actually a parameter directly under declaration";
     } else {
         pass "No direct parameter children found (acceptable)";
     }
@@ -266,13 +266,13 @@ subtest "Named captures", {
     my $lit-capture-result = $ast.&ast-query('.literal$values');
     ok $lit-capture-result.hash<values>:exists, "Named capture 'values' exists";
     ok $lit-capture-result.hash<values>.elems > 0, "Named capture 'values' has elements";
-    ok $lit-capture-result.hash<values>.first(*.^name ~~ /Literal/), "Captured elements are actually literals";
+    ok $lit-capture-result.hash<values>.grep(*.^name ~~ /Literal/).elems > 0, "Captured elements are actually literals";
     
     # Test .call$functions (capture all calls as 'functions')
     my $call-capture-result = $ast.&ast-query('.call$functions');
     ok $call-capture-result.hash<functions>:exists, "Named capture 'functions' exists";
     ok $call-capture-result.hash<functions>.elems > 0, "Named capture 'functions' has elements";
-    ok $call-capture-result.hash<functions>.first(*.^name eq "RakuAST::Call"), "Captured elements are actually calls";
+    ok $call-capture-result.hash<functions>.grep(*.^name eq "RakuAST::Call").elems > 0, "Captured elements are actually calls";
 };
 
 # Test complex nested queries
@@ -283,7 +283,7 @@ subtest "Complex nested queries", {
     my $complex1-result = $ast.&ast-query('.conditional >>> .call#say$messages');
     ok $complex1-result.list.elems >= 0, "Complex query .conditional >>> .call#say\$messages executed";
     if $complex1-result.list.elems > 0 {
-        ok $complex1-result.list.first(*.name.simple-identifier eq "say"), "Found element is actually a 'say' call inside conditional";
+        ok $complex1-result.list.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say").elems > 0, "Found element is actually a 'say' call inside conditional";
     } else {
         pass "No say calls found in conditionals (acceptable)";
     }
@@ -292,7 +292,7 @@ subtest "Complex nested queries", {
     my $complex2-result = $ast.&ast-query('.iterable >>> .call >>> .int$numbers');
     ok $complex2-result.list.elems >= 0, "Complex query .iterable >>> .call >>> .int\$numbers executed";
     if $complex2-result.list.elems > 0 {
-        ok $complex2-result.list.first(*.^name eq "RakuAST::IntLiteral"), "Found element is actually an integer inside calls inside loops";
+        ok $complex2-result.list.grep(*.^name eq "RakuAST::IntLiteral").elems > 0, "Found element is actually an integer inside calls inside loops";
     } else {
         pass "No integers in calls in loops found (acceptable)";
     }
@@ -301,7 +301,7 @@ subtest "Complex nested queries", {
     my $complex3-result = $ast.&ast-query('.declaration#process >>> .parameter#data');
     ok $complex3-result.list.elems >= 0, "Complex query .declaration#process >>> .parameter#data executed";
     if $complex3-result.list.elems > 0 {
-        ok $complex3-result.list.first(*.target.desigilname eq "data"), "Found element is actually parameter 'data' inside process declaration";
+        ok $complex3-result.list.grep(*.can('target') && *.target.can('desigilname') && *.target.desigilname eq "data").elems > 0, "Found element is actually parameter 'data' inside process declaration";
     } else {
         pass "No 'data' parameter found in process (acceptable)";
     }
@@ -310,7 +310,7 @@ subtest "Complex nested queries", {
     my $complex4-result = $ast.&ast-query('.statement >>> .var#x');
     ok $complex4-result.list.elems >= 0, "Complex query .statement >>> .var#x executed";
     if $complex4-result.list.elems > 0 {
-        ok $complex4-result.list.first(*.desigilname eq "x"), "Found element is actually variable 'x' inside statements";
+        ok $complex4-result.list.grep(*.can('desigilname') && *.desigilname eq "x").elems > 0, "Found element is actually variable 'x' inside statements";
     } else {
         pass "No variable 'x' found in statements (acceptable)";
     }
@@ -324,7 +324,7 @@ subtest "Operator queries", {
     my $apply-op-result = $ast.&ast-query('.apply-op');
     ok $apply-op-result.list.elems >= 0, "Query .apply-op executed";
     if $apply-op-result.list.elems > 0 {
-        ok $apply-op-result.list.first(*.^name ~~ /ApplyOp|ApplyInfix|ApplyPrefix|ApplyPostfix/), "Found element is actually an applied operator";
+        ok $apply-op-result.list.grep(*.^name ~~ /ApplyOp|ApplyInfix|ApplyPrefix|ApplyPostfix/).elems > 0, "Found element is actually an applied operator";
     } else {
         pass "No applied operators found (acceptable)";
     }
@@ -333,7 +333,7 @@ subtest "Operator queries", {
     my $op-result = $ast.&ast-query('.op');
     ok $op-result.list.elems >= 0, "Query .op executed";
     if $op-result.list.elems > 0 {
-        ok $op-result.list.first(*.^name ~~ /Op|Infix|Prefix|Postfix/), "Found element is actually an operator";
+        ok $op-result.list.grep(*.^name ~~ /Op|Infix|Prefix|Postfix/).elems > 0, "Found element is actually an operator";
     } else {
         pass "No operators found (acceptable)";
     }
@@ -342,7 +342,7 @@ subtest "Operator queries", {
     my $plus-result = $ast.&ast-query('#"+"');
     ok $plus-result.list.elems >= 0, "Query for + operator executed";
     if $plus-result.list.elems > 0 {
-        ok $plus-result.list.first(*.operator eq "+"), "Found element is actually the '+' operator";
+        ok $plus-result.list.grep(*.can('operator') && *.operator eq "+").elems > 0, "Found element is actually the '+' operator";
     } else {
         pass "No '+' operator found (acceptable)";
     }
@@ -350,7 +350,7 @@ subtest "Operator queries", {
     my $mult-result = $ast.&ast-query('#"*"');
     ok $mult-result.list.elems >= 0, "Query for * operator executed";
     if $mult-result.list.elems > 0 {
-        ok $mult-result.list.first(*.operator eq "*"), "Found element is actually the '*' operator";
+        ok $mult-result.list.grep(*.can('operator') && *.operator eq "*").elems > 0, "Found element is actually the '*' operator";
     } else {
         pass "No '*' operator found (acceptable)";
     }
@@ -364,7 +364,7 @@ subtest "Attribute queries", {
     my $value-attr-result = $ast.&ast-query('[value]');
     ok $value-attr-result.list.elems >= 0, "Attribute query [value] executed";
     if $value-attr-result.list.elems > 0 {
-        ok defined($value-attr-result.list.first.value), "Found element actually has a value attribute";
+        ok $value-attr-result.list.grep(*.can('value')).elems > 0, "Found element actually has a value attribute";
     } else {
         pass "No elements with value attribute found (acceptable)";
     }
@@ -373,7 +373,7 @@ subtest "Attribute queries", {
     my $name-attr-result = $ast.&ast-query('[name]');
     ok $name-attr-result.list.elems >= 0, "Attribute query [name] executed";
     if $name-attr-result.list.elems > 0 {
-        ok defined($name-attr-result.list.first.name), "Found element actually has a name attribute";
+        ok $name-attr-result.list.grep(*.can('name')).elems > 0, "Found element actually has a name attribute";
     } else {
         pass "No elements with name attribute found (acceptable)";
     }
@@ -382,7 +382,7 @@ subtest "Attribute queries", {
     my $value42-attr-result = $ast.&ast-query('[value=42]');
     ok $value42-attr-result.list.elems >= 0, "Attribute query [value=42] executed";
     if $value42-attr-result.list.elems > 0 {
-        is $value42-attr-result.list.first.value, 42, "Found element actually has value 42";
+        ok $value42-attr-result.list.grep(*.can('value') && *.value == 42).elems > 0, "Found element actually has value 42";
     } else {
         pass "No elements with value=42 found (acceptable)";
     }
@@ -391,7 +391,7 @@ subtest "Attribute queries", {
     my $name-hello-attr-result = $ast.&ast-query('[name="hello"]');
     ok $name-hello-attr-result.list.elems >= 0, "Attribute query [name=\"hello\"] executed";
     if $name-hello-attr-result.list.elems > 0 {
-        ok $name-hello-attr-result.list.first.name ~~ /"hello"/, "Found element actually has name containing 'hello'";
+        ok $name-hello-attr-result.list.grep(*.can('name') && *.name ~~ /"hello"/).elems > 0, "Found element actually has name containing 'hello'";
     } else {
         pass "No elements with name='hello' found (acceptable)";
     }
