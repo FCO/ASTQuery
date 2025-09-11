@@ -2,295 +2,421 @@ use experimental :rakuast;
 use Test;
 use ASTQuery;
 
-plan 15; # Basic query syntax validation tests with expected node matching
+plan 15; # Basic query syntax validation tests with manual node validation
 
-# Test helper to extract specific nodes from a parsed AST tree
-sub extract-expected-nodes($ast, $pattern) {
-    return $ast.&ast-query($pattern).list;
+# Helper function to manually walk AST tree and collect all nodes of specific types
+sub walk-ast-manual($ast, &condition --> Array) {
+    my @results = Empty;
+    
+    # Check current node
+    @results.push($ast) if condition($ast);
+    
+    # Manually traverse child nodes based on known RakuAST structure
+    # Different node types have different child access patterns
+    
+    # Try common traversal patterns for different node types
+    if $ast.^can('statements') && $ast.statements.defined {
+        for $ast.statements -> $stmt {
+            @results.append: walk-ast-manual($stmt, &condition);
+        }
+    }
+    
+    if $ast.^can('expression') && $ast.expression.defined {
+        @results.append: walk-ast-manual($ast.expression, &condition);
+    }
+    
+    if $ast.^can('args') && $ast.args.defined {
+        @results.append: walk-ast-manual($ast.args, &condition);
+    }
+    
+    if $ast.^can('body') && $ast.body.defined {
+        @results.append: walk-ast-manual($ast.body, &condition);
+    }
+    
+    if $ast.^can('then') && $ast.then.defined {
+        @results.append: walk-ast-manual($ast.then, &condition);
+    }
+    
+    if $ast.^can('source') && $ast.source.defined {
+        @results.append: walk-ast-manual($ast.source, &condition);
+    }
+    
+    if $ast.^can('left') && $ast.left.defined {
+        @results.append: walk-ast-manual($ast.left, &condition);
+    }
+    
+    if $ast.^can('right') && $ast.right.defined {
+        @results.append: walk-ast-manual($ast.right, &condition);
+    }
+    
+    if $ast.^can('condition') && $ast.condition.defined {
+        @results.append: walk-ast-manual($ast.condition, &condition);
+    }
+    
+    if $ast.^can('name') && $ast.name.defined && $ast.name ~~ RakuAST::Node {
+        @results.append: walk-ast-manual($ast.name, &condition);
+    }
+    
+    if $ast.^can('signature') && $ast.signature.defined {
+        @results.append: walk-ast-manual($ast.signature, &condition);
+    }
+    
+    if $ast.^can('parameters') && $ast.parameters.defined {
+        for $ast.parameters -> $param {
+            @results.append: walk-ast-manual($param, &condition);
+        }
+    }
+    
+    return @results;
 }
 
 # Test case 1: Integer literal queries
 subtest "Integer literal queries", {
     plan 3;
     
+    # Input: Define a known code sample with integer 42
     my $code = q{my $x = 42;};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-ints = extract-expected-nodes($ast, '.int');
-    my @expected-42-nodes = @expected-ints.grep(*.can('value') && *.value == 42);
-    my @expected-int42-combined = @expected-ints.grep(*.can('value') && *.value == 42);
+    # Manual AST traversal: Find integer nodes by hand
+    my @expected-ints = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::IntLiteral
+    });
+    my @expected-42-nodes = @expected-ints.grep({ $_.can('value') && $_.value == 42 });
+    my @expected-int42-combined = @expected-ints.grep({ $_.can('value') && $_.value == 42 });
     
     # Test group query for integers
     my $int-result = $ast.&ast-query('.int');
     is-deeply $int-result.list.sort, @expected-ints.sort,
-        ".int query returns exactly the expected integer literal nodes";
+        ".int query returns exactly the manually identified integer literal nodes";
     
     # Test ID query for specific value
     my $int42-result = $ast.&ast-query('#42');
     is-deeply $int42-result.list.sort, @expected-42-nodes.sort,
-        "#42 query returns exactly the expected nodes with value 42";
+        "#42 query returns exactly the manually identified nodes with value 42";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.int#42');
     is-deeply $combined-result.list.sort, @expected-int42-combined.sort,
-        ".int#42 query returns exactly the expected integer nodes with value 42";
+        ".int#42 query returns exactly the manually identified integer nodes with value 42";
 };
 
 # Test case 2: String literal queries
 subtest "String literal queries", {
     plan 3;
     
+    # Input: Define a known code sample with string "hello"
     my $code = q{my $name = "hello";};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-strs = extract-expected-nodes($ast, '.str');
-    my @expected-hello-nodes = @expected-strs.grep(*.can('value') && *.value eq "hello");
-    my @expected-str-hello-combined = @expected-strs.grep(*.can('value') && *.value eq "hello");
+    # Manual AST traversal: Find string nodes by hand
+    my @expected-strs = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::StrLiteral
+    });
+    my @expected-hello-nodes = @expected-strs.grep({ $_.can('value') && $_.value eq "hello" });
+    my @expected-str-hello-combined = @expected-strs.grep({ $_.can('value') && $_.value eq "hello" });
     
     # Test group query for strings
     my $str-result = $ast.&ast-query('.str');
     is-deeply $str-result.list.sort, @expected-strs.sort,
-        ".str query returns exactly the expected string literal nodes";
+        ".str query returns exactly the manually identified string literal nodes";
     
     # Test ID query for specific string
     my $hello-result = $ast.&ast-query('#"hello"');
     is-deeply $hello-result.list.sort, @expected-hello-nodes.sort,
-        '#"hello" query returns exactly the expected nodes with value "hello"';
+        '#"hello" query returns exactly the manually identified nodes with value "hello"';
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.str#"hello"');
     is-deeply $combined-result.list.sort, @expected-str-hello-combined.sort,
-        '.str#"hello" query returns exactly the expected string nodes with value "hello"';
+        '.str#"hello" query returns exactly the manually identified string nodes with value "hello"';
 };
 
 # Test case 3: Variable queries
 subtest "Variable queries", {
     plan 3;
     
+    # Input: Define a known code sample with variable operations
     my $code = q{my $count = 0; $count++;};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-vars = extract-expected-nodes($ast, '.var');
-    my @expected-count-nodes = @expected-vars.grep(*.can('desigilname') && *.desigilname eq "count");
-    my @expected-var-count-combined = @expected-vars.grep(*.can('desigilname') && *.desigilname eq "count");
+    # Manual AST traversal: Find variable nodes by hand
+    my @expected-vars = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Var | RakuAST::Var::Lexical | RakuAST::VarDeclaration
+    });
+    my @expected-count-nodes = @expected-vars.grep({ $_.can('desigilname') && $_.desigilname eq "count" });
+    my @expected-var-count-combined = @expected-vars.grep({ $_.can('desigilname') && $_.desigilname eq "count" });
     
     # Test group query for variables
     my $var-result = $ast.&ast-query('.var');
     is-deeply $var-result.list.sort, @expected-vars.sort,
-        ".var query returns exactly the expected variable nodes";
+        ".var query returns exactly the manually identified variable nodes";
     
     # Test ID query for specific variable name
     my $count-result = $ast.&ast-query('#count');
     is-deeply $count-result.list.sort, @expected-count-nodes.sort,
-        "#count query returns exactly the expected variable nodes with name 'count'";
+        "#count query returns exactly the manually identified variable nodes with name 'count'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.var#count');
     is-deeply $combined-result.list.sort, @expected-var-count-combined.sort,
-        ".var#count query returns exactly the expected variable nodes with name 'count'";
+        ".var#count query returns exactly the manually identified variable nodes with name 'count'";
 };
 
 # Test case 4: Function call queries
 subtest "Function call queries", {
     plan 3;
     
+    # Input: Define a known code sample with function calls
     my $code = q{say "hello"; print "world";};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-calls = extract-expected-nodes($ast, '.call');
-    my @expected-say-nodes = @expected-calls.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say");
-    my @expected-call-say-combined = @expected-calls.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "say");
+    # Manual AST traversal: Find call nodes by hand
+    my @expected-calls = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Call
+    });
+    my @expected-say-nodes = @expected-calls.grep({ 
+        $_.can('name') && $_.name.can('simple-identifier') && $_.name.simple-identifier eq "say" 
+    });
+    my @expected-call-say-combined = @expected-calls.grep({
+        $_.can('name') && $_.name.can('simple-identifier') && $_.name.simple-identifier eq "say"
+    });
     
     # Test group query for calls
     my $call-result = $ast.&ast-query('.call');
     is-deeply $call-result.list.sort, @expected-calls.sort,
-        ".call query returns exactly the expected call nodes";
+        ".call query returns exactly the manually identified call nodes";
     
     # Test ID query for specific function name
     my $say-result = $ast.&ast-query('#say');
     is-deeply $say-result.list.sort, @expected-say-nodes.sort,
-        "#say query returns exactly the expected call nodes with name 'say'";
+        "#say query returns exactly the manually identified call nodes with name 'say'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.call#say');
     is-deeply $combined-result.list.sort, @expected-call-say-combined.sort,
-        ".call#say query returns exactly the expected call nodes with name 'say'";
+        ".call#say query returns exactly the manually identified call nodes with name 'say'";
 };
 
 # Test case 5: Conditional queries
 subtest "Conditional queries", {
     plan 3;
     
+    # Input: Define a known code sample with conditional statement
     my $code = q{if True { say "yes"; }};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
-    my @expected-cond-calls = gather {
-        for @expected-conditionals -> $cond {
-            take $cond.&ast-query('.call').list;
-        }
-    }.flat;
-    my @expected-cond-says = gather {
-        for @expected-conditionals -> $cond {
-            take $cond.&ast-query('#say').list;
-        }
-    }.flat;
+    # Manual AST traversal: Find conditionals and calls inside them by hand
+    my @expected-conditionals = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Statement::If | RakuAST::Statement::Unless | RakuAST::Statement::When
+    });
+    
+    my @expected-cond-calls = Empty;
+    for @expected-conditionals -> $cond {
+        my @calls-in-this-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Call
+        });
+        @expected-cond-calls.append: @calls-in-this-cond;
+    }
+    
+    my @expected-cond-says = Empty;
+    for @expected-conditionals -> $cond {
+        my @says-in-this-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Call && $node.can('name') && 
+            $node.name.can('simple-identifier') && $node.name.simple-identifier eq "say"
+        });
+        @expected-cond-says.append: @says-in-this-cond;
+    }
     
     # Test group query for conditionals
     my $cond-result = $ast.&ast-query('.conditional');
     is-deeply $cond-result.list.sort, @expected-conditionals.sort,
-        ".conditional query returns exactly the expected conditional nodes";
+        ".conditional query returns exactly the manually identified conditional nodes";
     
     # Test descendant query to find calls inside conditionals
     my $cond-call-result = $ast.&ast-query('.conditional >>> .call');
     is-deeply $cond-call-result.list.sort, @expected-cond-calls.sort,
-        ".conditional >>> .call returns exactly the expected call nodes inside conditionals";
+        ".conditional >>> .call returns exactly the manually identified call nodes inside conditionals";
     
     # Test descendant query with ID
     my $cond-say-result = $ast.&ast-query('.conditional >>> #say');
     is-deeply $cond-say-result.list.sort, @expected-cond-says.sort,
-        ".conditional >>> #say returns exactly the expected say nodes inside conditionals";
+        ".conditional >>> #say returns exactly the manually identified say nodes inside conditionals";
 };
 
 # Test case 6: Loop queries
 subtest "Loop queries", {
     plan 3;
     
+    # Input: Define a known code sample with loop construct
     my $code = q{for 1..3 -> $i { say $i; }};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-iterables = extract-expected-nodes($ast, '.iterable');
-    my @expected-iter-calls = gather {
-        for @expected-iterables -> $iter {
-            take $iter.&ast-query('.call').list;
-        }
-    }.flat;
-    my @expected-iter-vars = gather {
-        for @expected-iterables -> $iter {
-            take $iter.&ast-query('.var').list;
-        }
-    }.flat;
+    # Manual AST traversal: Find iterables and their contents by hand
+    my @expected-iterables = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Statement::For | RakuAST::Statement::Loop | RakuAST::ForLoopImplementation
+    });
+    
+    my @expected-iter-calls = Empty;
+    for @expected-iterables -> $iter {
+        my @calls-in-this-iter = walk-ast-manual($iter, -> $node {
+            $node ~~ RakuAST::Call
+        });
+        @expected-iter-calls.append: @calls-in-this-iter;
+    }
+    
+    my @expected-iter-vars = Empty;
+    for @expected-iterables -> $iter {
+        my @vars-in-this-iter = walk-ast-manual($iter, -> $node {
+            $node ~~ RakuAST::Var | RakuAST::Var::Lexical | RakuAST::VarDeclaration
+        });
+        @expected-iter-vars.append: @vars-in-this-iter;
+    }
     
     # Test group query for loops
     my $loop-result = $ast.&ast-query('.iterable');
     is-deeply $loop-result.list.sort, @expected-iterables.sort,
-        ".iterable query returns exactly the expected iterable nodes";
+        ".iterable query returns exactly the manually identified iterable nodes";
     
     # Test descendant query to find calls inside loops
     my $loop-call-result = $ast.&ast-query('.iterable >>> .call');
     is-deeply $loop-call-result.list.sort, @expected-iter-calls.sort,
-        ".iterable >>> .call returns exactly the expected call nodes inside iterables";
+        ".iterable >>> .call returns exactly the manually identified call nodes inside iterables";
     
     # Test descendant query for variables inside loops
     my $loop-var-result = $ast.&ast-query('.iterable >>> .var');
     is-deeply $loop-var-result.list.sort, @expected-iter-vars.sort,
-        ".iterable >>> .var returns exactly the expected variable nodes inside iterables";
+        ".iterable >>> .var returns exactly the manually identified variable nodes inside iterables";
 };
 
 # Test case 7: Declaration queries
 subtest "Declaration queries", {
     plan 3;
     
+    # Input: Define a known code sample with subroutine declaration
     my $code = q{sub process($data) { return $data + 1; }};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
-    my @expected-process-nodes = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process");
-    my @expected-decl-process-combined = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "process");
+    # Manual AST traversal: Find declarations by hand
+    my @expected-declarations = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Sub | RakuAST::Method | RakuAST::Routine | 
+        RakuAST::Class | RakuAST::Role | RakuAST::Module | 
+        RakuAST::Declaration | RakuAST::VarDeclaration
+    });
+    my @expected-process-nodes = @expected-declarations.grep({
+        $_.can('name') && $_.name.can('simple-identifier') && $_.name.simple-identifier eq "process"
+    });
+    my @expected-decl-process-combined = @expected-declarations.grep({
+        $_.can('name') && $_.name.can('simple-identifier') && $_.name.simple-identifier eq "process"
+    });
     
     # Test group query for declarations
     my $decl-result = $ast.&ast-query('.declaration');
     is-deeply $decl-result.list.sort, @expected-declarations.sort,
-        ".declaration query returns exactly the expected declaration nodes";
+        ".declaration query returns exactly the manually identified declaration nodes";
     
     # Test ID query for specific routine name
     my $process-result = $ast.&ast-query('#process');
     is-deeply $process-result.list.sort, @expected-process-nodes.sort,
-        "#process query returns exactly the expected declaration nodes with name 'process'";
+        "#process query returns exactly the manually identified declaration nodes with name 'process'";
     
     # Test combined group and ID
     my $combined-result = $ast.&ast-query('.declaration#process');
     is-deeply $combined-result.list.sort, @expected-decl-process-combined.sort,
-        ".declaration#process query returns exactly the expected declaration nodes with name 'process'";
+        ".declaration#process query returns exactly the manually identified declaration nodes with name 'process'";
 };
 
 # Test case 8: Parameter queries
 subtest "Parameter queries", {
     plan 2;
     
+    # Input: Define a known code sample with function parameters
     my $code = q{sub calculate($x, $y) { $x + $y; }};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-parameters = extract-expected-nodes($ast, '.parameter');
-    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
-    my @expected-decl-params = gather {
-        for @expected-declarations -> $decl {
-            take $decl.&ast-query('.parameter').list;
-        }
-    }.flat;
+    # Manual AST traversal: Find parameters by hand
+    my @expected-parameters = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Parameter
+    });
+    
+    my @expected-declarations = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Sub | RakuAST::Method | RakuAST::Routine | 
+        RakuAST::Declaration | RakuAST::VarDeclaration
+    });
+    
+    my @expected-decl-params = Empty;
+    for @expected-declarations -> $decl {
+        my @params-in-this-decl = walk-ast-manual($decl, -> $node {
+            $node ~~ RakuAST::Parameter
+        });
+        @expected-decl-params.append: @params-in-this-decl;
+    }
     
     # Test group query for parameters
     my $param-result = $ast.&ast-query('.parameter');
     is-deeply $param-result.list.sort, @expected-parameters.sort,
-        ".parameter query returns exactly the expected parameter nodes";
+        ".parameter query returns exactly the manually identified parameter nodes";
     
     # Test descendant query for parameters inside declarations
     my $decl-param-result = $ast.&ast-query('.declaration >>> .parameter');
     is-deeply $decl-param-result.list.sort, @expected-decl-params.sort,
-        ".declaration >>> .parameter returns exactly the expected parameter nodes inside declarations";
+        ".declaration >>> .parameter returns exactly the manually identified parameter nodes inside declarations";
 };
 
 # Test case 9: Operator queries
 subtest "Operator queries", {
     plan 2;
     
+    # Input: Define a known code sample with operators
     my $code = q{my $result = $x + $y * 2;};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-apply-ops = extract-expected-nodes($ast, '.apply-op');
-    my @expected-ops = extract-expected-nodes($ast, '.op');
+    # Manual AST traversal: Find operator nodes by hand
+    my @expected-apply-ops = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::ApplyInfix | RakuAST::ApplyListInfix | 
+        RakuAST::ApplyDottyInfix | RakuAST::ApplyPostfix | RakuAST::ApplyPrefix
+    });
+    my @expected-ops = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Infixish | RakuAST::Prefixish | RakuAST::Postfixish |
+        RakuAST::Infix | RakuAST::Prefix | RakuAST::Postfix
+    });
     
     # Test group query for applied operators
     my $apply-op-result = $ast.&ast-query('.apply-op');
     is-deeply $apply-op-result.list.sort, @expected-apply-ops.sort,
-        ".apply-op query returns exactly the expected applied operator nodes";
+        ".apply-op query returns exactly the manually identified applied operator nodes";
     
     # Test group query for all operators
     my $op-result = $ast.&ast-query('.op');
     is-deeply $op-result.list.sort, @expected-ops.sort,
-        ".op query returns exactly the expected operator nodes";
+        ".op query returns exactly the manually identified operator nodes";
 };
 
 # Test case 10: Named capture queries
 subtest "Named capture queries", {
     plan 2;
     
+    # Input: Define a known code sample with literals
     my $code = q{my $a = 1; my $b = 2; my $c = 3;};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-literals = extract-expected-nodes($ast, '.literal');
+    # Manual AST traversal: Find literal nodes by hand
+    my @expected-literals = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::IntLiteral | RakuAST::StrLiteral | RakuAST::Literal
+    });
     
     # Test named capture for literals
     my $lit-capture-result = $ast.&ast-query('.literal$numbers');
     ok $lit-capture-result.hash<numbers>:exists, "Named capture 'numbers' exists for literals";
     is-deeply $lit-capture-result.hash<numbers>.sort, @expected-literals.sort,
-        "Named capture 'numbers' contains exactly the expected literal nodes";
+        "Named capture 'numbers' contains exactly the manually identified literal nodes";
 };
 
 # Test case 11: Complex descendant queries
 subtest "Complex descendant queries", {
     plan 3;
     
+    # Input: Define a known code sample with nested structures
     my $code = q{
         if $condition {
             for @items -> $item {
@@ -300,116 +426,143 @@ subtest "Complex descendant queries", {
     };
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
-    my @expected-iterables = extract-expected-nodes($ast, '.iterable');
-    my @expected-calls = extract-expected-nodes($ast, '.call');
+    # Manual AST traversal: Find nested structures by hand
+    my @expected-conditionals = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Statement::If | RakuAST::Statement::Unless | RakuAST::Statement::When
+    });
     
-    my @expected-cond-iterables = gather {
-        for @expected-conditionals -> $cond {
-            take $cond.&ast-query('.iterable').list;
-        }
-    }.flat;
+    my @expected-cond-iterables = Empty;
+    for @expected-conditionals -> $cond {
+        my @iterables-in-this-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Statement::For | RakuAST::Statement::Loop | RakuAST::ForLoopImplementation
+        });
+        @expected-cond-iterables.append: @iterables-in-this-cond;
+    }
     
-    my @expected-cond-iter-calls = gather {
-        for @expected-conditionals -> $cond {
-            for $cond.&ast-query('.iterable').list -> $iter {
-                take $iter.&ast-query('.call').list;
-            }
+    my @expected-cond-iter-calls = Empty;
+    for @expected-conditionals -> $cond {
+        my @iterables-in-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Statement::For | RakuAST::Statement::Loop | RakuAST::ForLoopImplementation
+        });
+        for @iterables-in-cond -> $iter {
+            my @calls-in-iter = walk-ast-manual($iter, -> $node {
+                $node ~~ RakuAST::Call
+            });
+            @expected-cond-iter-calls.append: @calls-in-iter;
         }
-    }.flat;
+    }
     
-    my @expected-cond-iter-says = gather {
-        for @expected-conditionals -> $cond {
-            for $cond.&ast-query('.iterable').list -> $iter {
-                take $iter.&ast-query('#say').list;
-            }
+    my @expected-cond-iter-says = Empty;
+    for @expected-conditionals -> $cond {
+        my @iterables-in-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Statement::For | RakuAST::Statement::Loop | RakuAST::ForLoopImplementation
+        });
+        for @iterables-in-cond -> $iter {
+            my @says-in-iter = walk-ast-manual($iter, -> $node {
+                $node ~~ RakuAST::Call && $node.can('name') && 
+                $node.name.can('simple-identifier') && $node.name.simple-identifier eq "say"
+            });
+            @expected-cond-iter-says.append: @says-in-iter;
         }
-    }.flat;
+    }
     
     # Test nested descendant queries
     my $complex1-result = $ast.&ast-query('.conditional >>> .iterable');
     is-deeply $complex1-result.list.sort, @expected-cond-iterables.sort,
-        ".conditional >>> .iterable returns exactly the expected iterable nodes inside conditionals";
+        ".conditional >>> .iterable returns exactly the manually identified iterable nodes inside conditionals";
     
     # Test triple descendant query
     my $complex2-result = $ast.&ast-query('.conditional >>> .iterable >>> .call');
     is-deeply $complex2-result.list.sort, @expected-cond-iter-calls.sort,
-        ".conditional >>> .iterable >>> .call returns exactly the expected call nodes inside iterables inside conditionals";
+        ".conditional >>> .iterable >>> .call returns exactly the manually identified call nodes inside iterables inside conditionals";
     
     # Test descendant with ID
     my $complex3-result = $ast.&ast-query('.conditional >>> .iterable >>> #say');
     is-deeply $complex3-result.list.sort, @expected-cond-iter-says.sort,
-        ".conditional >>> .iterable >>> #say returns exactly the expected say nodes inside iterables inside conditionals";
+        ".conditional >>> .iterable >>> #say returns exactly the manually identified say nodes inside iterables inside conditionals";
 };
 
 # Test case 12: Child relationship queries
 subtest "Child relationship queries", {
     plan 2;
     
+    # Input: Define a known code sample with direct parent-child relationships
     my $code = q{if True { say "direct"; }};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
-    my @expected-calls = extract-expected-nodes($ast, '.call');
+    # Manual AST traversal: Find conditionals and their direct children by hand
+    my @expected-conditionals = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Statement::If | RakuAST::Statement::Unless | RakuAST::Statement::When
+    });
     
-    my @expected-cond-direct-stmts = gather {
-        for @expected-conditionals -> $cond {
-            take $cond.&ast-query('> .statement').list;
+    # Note: Direct child relationships require specific knowledge of AST structure
+    # This is a simplified approximation for demonstration
+    my @expected-cond-direct-stmts = Empty;
+    for @expected-conditionals -> $cond {
+        # Direct statement children would be in the 'then' block typically
+        if $cond.can('then') && $cond.then.defined {
+            if $cond.then.can('statements') && $cond.then.statements.defined {
+                for $cond.then.statements -> $stmt {
+                    @expected-cond-direct-stmts.push($stmt) if $stmt ~~ RakuAST::Statement;
+                }
+            }
         }
-    }.flat;
+    }
     
-    my @expected-cond-grandchild-calls = gather {
-        for @expected-conditionals -> $cond {
-            take $cond.&ast-query('>> .call').list;
-        }
-    }.flat;
+    my @expected-cond-grandchild-calls = Empty;
+    for @expected-conditionals -> $cond {
+        my @calls-in-cond = walk-ast-manual($cond, -> $node {
+            $node ~~ RakuAST::Call
+        });
+        @expected-cond-grandchild-calls.append: @calls-in-cond;
+    }
     
     # Test direct child queries
     my $child-result = $ast.&ast-query('.conditional > .statement');
     is-deeply $child-result.list.sort, @expected-cond-direct-stmts.sort,
-        ".conditional > .statement returns exactly the expected direct statement children";
+        ".conditional > .statement returns exactly the manually identified direct statement children";
     
     # Test grandchild queries  
     my $grandchild-result = $ast.&ast-query('.conditional >> .call');
     is-deeply $grandchild-result.list.sort, @expected-cond-grandchild-calls.sort,
-        ".conditional >> .call returns exactly the expected grandchild call nodes";
+        ".conditional >> .call returns exactly the manually identified grandchild call nodes";
 };
 
 # Test case 13: Attribute-based queries
 subtest "Attribute-based queries", {
     plan 3;
     
+    # Input: Define a known code sample with various node types
     my $code = q{my $value = 42; say "hello";};
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @all-nodes = extract-expected-nodes($ast, '*'); # Get all nodes
-    my @expected-value-attrs = @all-nodes.grep(*.can('value'));
-    my @expected-value42-attrs = @all-nodes.grep(*.can('value') && *.value == 42);
-    my @expected-name-attrs = @all-nodes.grep(*.can('name'));
+    # Manual AST traversal: Find all nodes and categorize by attributes by hand
+    my @all-nodes = walk-ast-manual($ast, -> $node { True }); # Get all nodes
+    my @expected-value-attrs = @all-nodes.grep({ $_.can('value') });
+    my @expected-value42-attrs = @all-nodes.grep({ $_.can('value') && $_.value == 42 });
+    my @expected-name-attrs = @all-nodes.grep({ $_.can('name') });
     
     # Test attribute existence
     my $value-attr-result = $ast.&ast-query('[value]');
     is-deeply $value-attr-result.list.sort, @expected-value-attrs.sort,
-        "[value] query returns exactly the expected nodes with value attribute";
+        "[value] query returns exactly the manually identified nodes with value attribute";
     
     # Test specific attribute value
     my $value42-attr-result = $ast.&ast-query('[value=42]');
     is-deeply $value42-attr-result.list.sort, @expected-value42-attrs.sort,
-        "[value=42] query returns exactly the expected nodes with value 42";
+        "[value=42] query returns exactly the manually identified nodes with value 42";
     
     # Test name attribute
     my $name-attr-result = $ast.&ast-query('[name]');
     is-deeply $name-attr-result.list.sort, @expected-name-attrs.sort,
-        "[name] query returns exactly the expected nodes with name attribute";
+        "[name] query returns exactly the manually identified nodes with name attribute";
 };
 
 # Test case 14: Combination syntax queries
 subtest "Combination syntax queries", {
     plan 3;
     
+    # Input: Define a known code sample with complex structures
     my $code = q{
         sub test($input) {
             my $result = $input * 2;
@@ -421,55 +574,74 @@ subtest "Combination syntax queries", {
     };
     my $ast = $code.AST;
     
-    # Pre-extract expected nodes from the known AST
-    my @expected-declarations = extract-expected-nodes($ast, '.declaration');
-    my @expected-conditionals = extract-expected-nodes($ast, '.conditional');
-    my @expected-literals = extract-expected-nodes($ast, '.literal');
-    my @expected-test-nodes = @expected-declarations.grep(*.can('name') && *.name.can('simple-identifier') && *.name.simple-identifier eq "test");
-    my @expected-vars = extract-expected-nodes($ast, '.var');
+    # Manual AST traversal: Find complex nested structures by hand
+    my @expected-declarations = walk-ast-manual($ast, -> $node {
+        $node ~~ RakuAST::Sub | RakuAST::Method | RakuAST::Routine | 
+        RakuAST::Declaration | RakuAST::VarDeclaration
+    });
+    my @expected-test-nodes = @expected-declarations.grep({
+        $_.can('name') && $_.name.can('simple-identifier') && $_.name.simple-identifier eq "test"
+    });
     
-    my @expected-multi-group = gather {
-        for @expected-declarations -> $decl {
-            for $decl.&ast-query('.conditional').list -> $cond {
-                take $cond.&ast-query('.literal').list;
-            }
+    my @expected-multi-group = Empty;
+    for @expected-declarations -> $decl {
+        my @conditionals-in-decl = walk-ast-manual($decl, -> $node {
+            $node ~~ RakuAST::Statement::If | RakuAST::Statement::Unless | RakuAST::Statement::When
+        });
+        for @conditionals-in-decl -> $cond {
+            my @literals-in-cond = walk-ast-manual($cond, -> $node {
+                $node ~~ RakuAST::IntLiteral | RakuAST::StrLiteral | RakuAST::Literal
+            });
+            @expected-multi-group.append: @literals-in-cond;
         }
-    }.flat;
+    }
     
-    my @expected-group-id-desc = gather {
-        for @expected-test-nodes -> $test {
-            take $test.&ast-query('.var').list.grep(*.can('desigilname') && *.desigilname eq "result");
-        }
-    }.flat;
+    my @expected-group-id-desc = Empty;
+    for @expected-test-nodes -> $test {
+        my @vars-in-test = walk-ast-manual($test, -> $node {
+            $node ~~ RakuAST::Var | RakuAST::Var::Lexical | RakuAST::VarDeclaration
+        });
+        my @result-vars = @vars-in-test.grep({
+            $_.can('desigilname') && $_.desigilname eq "result"
+        });
+        @expected-group-id-desc.append: @result-vars;
+    }
     
-    my @expected-complex-capture = gather {
-        for @expected-test-nodes -> $test {
-            take $test.&ast-query('.literal').list;
-        }
-    }.flat;
+    my @expected-complex-capture = Empty;
+    for @expected-test-nodes -> $test {
+        my @literals-in-test = walk-ast-manual($test, -> $node {
+            $node ~~ RakuAST::IntLiteral | RakuAST::StrLiteral | RakuAST::Literal
+        });
+        @expected-complex-capture.append: @literals-in-test;
+    }
     
     # Test multiple groups combined
     my $multi-group-result = $ast.&ast-query('.declaration >>> .conditional >>> .literal');
     is-deeply $multi-group-result.list.sort, @expected-multi-group.sort,
-        ".declaration >>> .conditional >>> .literal returns exactly the expected literal nodes inside conditionals inside declarations";
+        ".declaration >>> .conditional >>> .literal returns exactly the manually identified literal nodes inside conditionals inside declarations";
     
     # Test group with ID and descendant
     my $group-id-desc-result = $ast.&ast-query('.declaration#test >>> .var#result');
     is-deeply $group-id-desc-result.list.sort, @expected-group-id-desc.sort,
-        ".declaration#test >>> .var#result returns exactly the expected result variables inside test declaration";
+        ".declaration#test >>> .var#result returns exactly the manually identified result variables inside test declaration";
     
     # Test complex capture
     my $complex-capture-result = $ast.&ast-query('.declaration#test >>> .literal$values');
     is-deeply $complex-capture-result.list.sort, @expected-complex-capture.sort,
-        ".declaration#test >>> .literal returns exactly the expected literal nodes inside test declaration";
+        ".declaration#test >>> .literal returns exactly the manually identified literal nodes inside test declaration";
 };
 
 # Test case 15: Error handling and edge cases
 subtest "Error handling and edge cases", {
     plan 3;
     
+    # Input: Define a simple code sample
     my $code = q{my $x = 1;};
     my $ast = $code.AST;
+    
+    # Manual AST traversal: We expect certain queries to return empty results
+    # For non-existent groups/IDs, we know by definition no nodes will match
+    my @expected-empty = Empty;
     
     # Test query for non-existent group
     my $nonexistent-result = $ast.&ast-query('.nonexistent');
@@ -479,7 +651,7 @@ subtest "Error handling and edge cases", {
     my $nonexistent-id-result = $ast.&ast-query('#nonexistent');
     is $nonexistent-id-result.list.elems, 0, "Non-existent ID returns empty result";
     
-    # Test complex query with no matches
+    # Test complex query with no matches (no conditionals in this simple code)
     my $no-match-result = $ast.&ast-query('.conditional >>> .call');
     is $no-match-result.list.elems, 0, "Query with no matches returns empty result";
 };
