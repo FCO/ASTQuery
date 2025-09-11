@@ -18,4 +18,6 @@ AGENTS Guide for ASTQuery (Raku 6.d)
 - Docs: Keep Pod6 in modules; update README examples if changing query syntax.
 - Cursor/Copilot: No Cursor or Copilot rule files present.
 - CI parity: Match GitHub Actions: `prove6 -I. t` on macOS/Ubuntu latest Raku.
+- Coverage: `zef install --/test App::RaCoCo` (once). Run `raku -I. bin/coverage.raku` to compute total coverage; it prints `percent=<number>`.
+- Pre-commit check: Before every commit, run `raku -I. bin/coverage-check.raku` which updates `.coverage-baseline` and tells you if coverage decreased vs. last commit.
 - Commits: Follow Conventional Commits (feat, fix, docs, chore, refactor, test, perf, build, ci, revert); imperative mood; optional scope; add body/footers when relevant (e.g., BREAKING CHANGE:, Closes #123).
