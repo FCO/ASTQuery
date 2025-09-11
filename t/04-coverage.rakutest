@@ -1,0 +1,97 @@
+use Test;
+use experimental :rakuast;
+use ASTQuery;
+use ASTQuery::Matcher;
+use ASTQuery::Match;
+
+# Enable debug paths to exercise validator logging branches
+%*ENV<ASTQUERY_DEBUG> = 1;
+
+class HL does ASTQuery::HighLighter {}
+
+# --- ASTQuery::Match: merge-or / merge-and ---
+{
+	my $m1 = ASTQuery::Match.new: :list[42];
+	my $m2 = ASTQuery::Match.new: :list[13];
+	ok ASTQuery::Match.merge-or($m1, $m2), 'merge-or returns a match when any truthy';
+	ok !ASTQuery::Match.merge-or(False, False), 'merge-or returns False when none truthy';
+	ok ASTQuery::Match.merge-and($m1, $m2), 'merge-and merges two matches';
+	ok !ASTQuery::Match.merge-and(False, $m1), 'merge-and returns False if any match is False';
+}
+
+# --- ASTQuery::Match: gist and prepare-code (RakuAST and non-RakuAST branches) ---
+{
+	my $match = ASTQuery::Match.new;
+	$match.list.push: 1;                # non-RakuAST branch
+	$match.hash.push: foo => 2;         # exercise hash printing
+	ok $match.gist.defined, 'gist works for non-RakuAST';
+
+	my $ast = q{ say 1 }.AST;           # RakuAST branch
+	$match.list.push: $ast;
+	ok $match.gist.defined, 'gist works for RakuAST node';
+}
+
+# --- ASTQuery::Match: query-* traversal variants ---
+{
+	my $ast = q{ say 1 + 2 }.AST;
+	my $matcher = ast-matcher('.int');
+	my $m = ASTQuery::Match.new(:ast($ast), :matcher($matcher));
+	my $desc = $m.query-descendants-only;
+	ok $desc ~~ ASTQuery::Match, 'query-descendants-only returns a match object';
+	ok $desc.list.grep({ .^name.ends-with('IntLiteral') }).elems >= 1, 'descendants search finds integers';
+	ok $m.query-children-only ~~ ASTQuery::Match, 'query-children-only executes';
+	ok $m.query-root-only ~~ ASTQuery::Match, 'query-root-only executes';
+}
+
+# --- ASTQuery::Matcher: get-id-field and validate-ids ---
+{
+	# Build explicit nodes to ensure type matches for get-id-field
+	my $call = RakuAST::Call::Name.new(name => RakuAST::Name.from-identifier('say'), args => RakuAST::ArgList.new());
+	my $int  = RakuAST::IntLiteral.new(42);
+	my $mm = ASTQuery::Matcher.new;
+	is $mm.get-id-field($call), 'name', 'get-id-field(Call) => name';
+	is $mm.get-id-field($int),  'value', 'get-id-field(IntLiteral) => value';
+	ok $mm.validate-ids($call, 'say'), 'validate-ids(Call, say) succeeds';
+}
+
+# --- ASTQuery::Matcher: custom groups via add-ast-group / add-to-ast-group ---
+{
+	# Define a new group and extend it
+	add-ast-group 'numberish', [RakuAST::IntLiteral, RakuAST::NumLiteral];
+	add-ast-group 'custom',    [RakuAST::IntLiteral];
+	add-to-ast-group 'custom', RakuAST::StrLiteral;
+
+	my $ast = q{
+		say 1;     # IntLiteral
+		say 2e0;   # NumLiteral
+		say 'x';   # StrLiteral
+	}.AST;
+
+	my $nums = $ast.&ast-query('.numberish');
+	ok $nums.list.elems >= 2, 'custom group numberish matches multiple numeric literals';
+
+	my $both = $ast.&ast-query('.custom');
+	my @kinds = $both.list.map(*.^name).unique;
+	ok @kinds.grep(*.ends-with('IntLiteral')).elems && @kinds.grep(*.ends-with('StrLiteral')).elems,
+		'custom group contains both IntLiteral and StrLiteral';
+}
+
+# --- HighLighter role: mapping and fallback branches ---
+{
+	my $hl = HL.new;
+	my $colored = $hl.hsyn('infix', '+');
+	ok $colored ~~ /"\e["/, 'HighLighter maps known type to ANSI color';
+	my $plain = $hl.hsyn('not-in-map', 'z');
+	is $plain, 'z', 'HighLighter fallback returns plain content';
+}
+
+# --- Exercise debug validator paths (no assertions on output) ---
+{
+	my $ast = q{ say 3 }.AST;
+	my $sel = ast-matcher('.int');
+	# ACCEPTS triggers print-validator-begin/end under ASTQUERY_DEBUG
+	$ = $sel.ACCEPTS($ast);
+	ok True, 'validator debug paths executed';
+}
+
+done-testing;
