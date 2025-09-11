@@ -194,8 +194,68 @@ for [
 	is-deeply $got, $expected, "is-deeply: " ~ @a.gist;
 }
 
-# TODO: missing how to test the following methods:
 # validate-parent
+{
+	my $m = ASTQuery::Matcher.new(:classes["RakuAST::ArgList",]);
+	{
+		my @*LINEAGE = arg-list, call; # immediate parent is ArgList
+		my $got = ASTQuery::Matcher.validate-parent: apply-infix, $m;
+		isa-ok $got, ASTQuery::Match, 'validate-parent returns a Match when parent matches';
+		is-deeply $got.list, [arg-list], 'validate-parent: matched parent node returned';
+	}
+	{
+		# Wrong immediate parent in lineage
+		my @*LINEAGE = call, arg-list;
+		my $got = ASTQuery::Matcher.validate-parent: apply-infix, $m;
+		is $got, False, 'validate-parent returns False when parent mismatches';
+	}
+}
+
 # validate-ascendant
+{
+	{
+		my $m = ASTQuery::Matcher.new(:classes["RakuAST::Call",]);
+		my @*LINEAGE = arg-list, call; # call is an ascendant
+		my $got = ASTQuery::Matcher.validate-ascendant: apply-infix, $m;
+		isa-ok $got, ASTQuery::Match, 'validate-ascendant returns a Match when any ascendant matches';
+	}
+	{
+		my $m = ASTQuery::Matcher.new(:classes["RakuAST::Ternary",]);
+		my @*LINEAGE = arg-list, call; # no Ternary in lineage
+		my $got = ASTQuery::Matcher.validate-ascendant: apply-infix, $m;
+		is $got, False, 'validate-ascendant returns False when no ascendant matches';
+	}
+}
+
+# validate-gparent (only ignorable nodes allowed between)
+{
+	# Positive: ArgList (ignorable) between ApplyInfix and Call
+	{
+		my $m = ASTQuery::Matcher.new(:classes["RakuAST::Call",]);
+		my @*LINEAGE = arg-list, call;
+		my $got = ASTQuery::Matcher.validate-gparent: apply-infix, $m;
+		isa-ok $got, ASTQuery::Match, 'validate-gparent succeeds across ignorable nodes';
+	}
+	# Negative: non-ignorable (ApplyInfix) blocks path to Call
+	{
+		my $m = ASTQuery::Matcher.new(:classes["RakuAST::Call",]);
+		my @*LINEAGE = apply-infix, arg-list, call;
+		my $got = ASTQuery::Matcher.validate-gparent: l42, $m;
+		is $got, False, 'validate-gparent fails when a non-ignorable node is between';
+	}
+}
+
+# validate-atts: nested attribute traversal (infix.operator, left.value, right.value)
+for [
+	(apply-infix, 'infix', '+', True),
+	(apply-infix, 'left',  42, True),
+	(apply-infix, 'right', 13, True),
+	(apply-infix, 'infix', '*', False),
+	(apply-infix, 'left',  99, False),
+	(apply-infix, 'right', 99, False),
+] -> @a [$node, Str $name, $value, $ok] {
+	my $got = ASTQuery::Matcher.validate-atts: $node, ($name => $value);
+	is so $got, $ok, 'validate-atts nested: ' ~ @a.gist;
+}
 
 done-testing

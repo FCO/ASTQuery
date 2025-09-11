@@ -29,6 +29,11 @@ class HL does ASTQuery::HighLighter {}
 	my $ast = q{ say 1 }.AST;           # RakuAST branch
 	$match.list.push: $ast;
 	ok $match.gist.defined, 'gist works for RakuAST node';
+
+	class BadDeparse is RakuAST::Node { method DEPARSE(|) { die "boom" } }
+	my $bad = BadDeparse.new;
+	$match.list.push: $bad;            # trigger prepare-code via gist
+	ok $match.gist ~~ /'cannot be deparsed'/, 'prepare-code handles DEPARSE failures';
 }
 
 # --- ASTQuery::Match: query-* traversal variants ---
