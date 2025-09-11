@@ -1,0 +1,21 @@
+AGENTS Guide for ASTQuery (Raku 6.d)
+- Setup: `zef install --/test --test-depends --deps-only .` (installs deps)
+- Install test runner: `zef install --/test App::Prove6`
+- Run all tests: `prove6 -I. t`
+- Run single test file: `prove6 -I. t/02-ASTQuery.rakutest` (or `raku -I. t/<file>`)
+- Syntax check (lint): `raku -I. -c lib/ASTQuery.rakumod lib/ASTQuery/*.rakumod`
+- Install locally: `zef install .` (optional)
+- CLI: `raku -I. bin/ast-query.raku` (if needed)
+- Imports: Put `use` at top; declare `unit module|class` first; export with `is export`.
+- Formatting: Use tabs for indentation; one `use` per line; keep lines readable (<100 cols); trailing commas in multi-line lists.
+- Types: Prefer typed signatures (`Str`, `Bool`, `Callable`), subsets + `where`; use `proto`/`multi` dispatch as in repo.
+- Naming: CamelCase for types/modules; hyphenated method names (e.g., `validate-descendant`); lower-case sub names; ALLCAPS env vars.
+- Errors: Use `fail` for programmer errors; return `False` for predicate no-match; wrap risky code in `CATCH { default { ... } }`.
+- Debug: Gate notes behind `%*ENV<ASTQUERY_DEBUG>`; use `note`, not `say`, in library code.
+- Tests: Use `use Test; done-testing;` with `.rakutest` files; prefer `isa-ok`, `is-deeply`, `ok`.
+- AST use: `use experimental :rakuast` where needed; avoid breaking matcher/API gists.
+- Public API: Modify exports in `lib/ASTQuery.rakumod` carefully; keep signatures stable.
+- Docs: Keep Pod6 in modules; update README examples if changing query syntax.
+- Cursor/Copilot: No Cursor or Copilot rule files present.
+- CI parity: Match GitHub Actions: `prove6 -I. t` on macOS/Ubuntu latest Raku.
+- Commits: Follow Conventional Commits (feat, fix, docs, chore, refactor, test, perf, build, ci, revert); imperative mood; optional scope; add body/footers when relevant (e.g., BREAKING CHANGE:, Closes #123).
