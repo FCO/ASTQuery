@@ -4,7 +4,7 @@ use MONKEY-TYPING;
 sub parse-percent(Str $s) { $s.subst(/^'percent='/, '').trim.Num }
 
 sub MAIN(Str :$baseline-file = '.coverage-baseline') {
-	my $out = qqx/raku -I. bin\/coverage.raku/;
+	my $out = qqx/raku -I. tools\/coverage.raku/;
 	my $line = $out.lines.grep(*.starts-with('percent=')).head // '';
 	my $current = parse-percent($line) // 0e0;
 
