@@ -6,6 +6,9 @@ unit class ASTQuery::Matcher;
 class ASTQuery::Matcher::AttrRel { has Str $.rel; has $.matcher; }
 class ASTQuery::Matcher::AttrOp  { has Str $.op;  has $.value;    }
 
+# Registry for user-defined functions (&function)
+my %functions is Map = %();
+
 
 =head1 List of RakuAST classes
 
@@ -178,162 +181,15 @@ class ASTQuery::Matcher::AttrOp  { has Str $.op;  has $.value;    }
 =item RakuAST::Regex::Atom
 =item RakuAST::Regex::BackReference
 =item RakuAST::Regex::Backtrack
+=item RakuAST::Regex::Backtrack::Frugal
+=item RakuAST::Regex::Backtrack::Greedy
+=item RakuAST::Regex::Backtrack::Ratchet
 =item RakuAST::Regex::BacktrackModifiedAtom
 =item RakuAST::Regex::Block
 =item RakuAST::Regex::Branching
 =item RakuAST::Regex::CapturingGroup
 =item RakuAST::Regex::CharClass
 =item RakuAST::Regex::CharClassElement
-=item RakuAST::Regex::CharClassEnumerationElement
-=item RakuAST::Regex::Conjunction
-=item RakuAST::Regex::Group
-=item RakuAST::Regex::InternalModifier
-=item RakuAST::Regex::Interpolation
-=item RakuAST::Regex::Literal
-=item RakuAST::Regex::MatchFrom
-=item RakuAST::Regex::MatchTo
-=item RakuAST::Regex::NamedCapture
-=item RakuAST::Regex::Nested
-=item RakuAST::Regex::QuantifiedAtom
-=item RakuAST::Regex::Quantifier
-=item RakuAST::Regex::Quote
-=item RakuAST::Regex::Sequence
-=item RakuAST::Regex::SequentialAlternation
-=item RakuAST::Regex::SequentialConjunction
-=item RakuAST::Regex::Statement
-=item RakuAST::Regex::Term
-=item RakuAST::Regex::WithWhitespace
-=item RakuAST::Role::ResolveInstantiations
-=item RakuAST::Role::TypeEnvVar
-=item RakuAST::Statement::Catch
-=item RakuAST::Statement::Control
-=item RakuAST::Statement::Default
-=item RakuAST::Statement::Empty
-=item RakuAST::Statement::ExceptionHandler
-=item RakuAST::Statement::Expression
-=item RakuAST::Statement::For
-=item RakuAST::Statement::Given
-=item RakuAST::Statement::If
-=item RakuAST::Statement::IfWith
-=item RakuAST::Statement::Import
-=item RakuAST::Statement::Loop
-=item RakuAST::Statement::Need
-=item RakuAST::Statement::Require
-=item RakuAST::Statement::Unless
-=item RakuAST::Statement::Use
-=item RakuAST::Statement::When
-=item RakuAST::Statement::Whenever
-=item RakuAST::Statement::With
-=item RakuAST::Statement::Without
-=item RakuAST::StatementModifier::Condition
-=item RakuAST::StatementModifier::For
-=item RakuAST::StatementModifier::Given
-=item RakuAST::StatementModifier::If
-=item RakuAST::StatementModifier::Loop
-=item RakuAST::StatementModifier::Unless
-=item RakuAST::StatementModifier::Until
-=item RakuAST::StatementModifier::When
-=item RakuAST::StatementModifier::While
-=item RakuAST::StatementModifier::With
-=item RakuAST::StatementModifier::Without
-=item RakuAST::StatementPrefix::Blorst
-=item RakuAST::StatementPrefix::CallMethod
-=item RakuAST::StatementPrefix::Do
-=item RakuAST::StatementPrefix::Eager
-=item RakuAST::StatementPrefix::Gather
-=item RakuAST::StatementPrefix::Hyper
-=item RakuAST::StatementPrefix::Lazy
-=item RakuAST::StatementPrefix::Once
-=item RakuAST::StatementPrefix::Phaser
-=item RakuAST::StatementPrefix::Quietly
-=item RakuAST::StatementPrefix::Race
-=item RakuAST::StatementPrefix::React
-=item RakuAST::StatementPrefix::Sink
-=item RakuAST::StatementPrefix::Start
-=item RakuAST::StatementPrefix::Supply
-=item RakuAST::StatementPrefix::Thunky
-=item RakuAST::StatementPrefix::Try
-=item RakuAST::StatementPrefix::Wheneverable
-=item RakuAST::Stub::Die
-=item RakuAST::Stub::Fail
-=item RakuAST::Stub::Warn
-=item RakuAST::Term::Capture
-=item RakuAST::Term::EmptySet
-=item RakuAST::Term::HyperWhatever
-=item RakuAST::Term::Name
-=item RakuAST::Term::Named
-=item RakuAST::Term::RadixNumber
-=item RakuAST::Term::Rand
-=item RakuAST::Term::Reduce
-=item RakuAST::Term::Self
-=item RakuAST::Term::TopicCall
-=item RakuAST::Term::Whatever
-=item RakuAST::Trait::Does
-=item RakuAST::Trait::Handles
-=item RakuAST::Trait::Hides
-=item RakuAST::Trait::Is
-=item RakuAST::Trait::Of
-=item RakuAST::Trait::Returns
-=item RakuAST::Trait::Type
-=item RakuAST::Trait::Will
-=item RakuAST::Trait::WillBuild
-=item RakuAST::Type::Capture
-=item RakuAST::Type::Coercion
-=item RakuAST::Type::Definedness
-=item RakuAST::Type::Derived
-=item RakuAST::Type::Enum
-=item RakuAST::Type::Parameterized
-=item RakuAST::Type::Setting
-=item RakuAST::Type::Simple
-=item RakuAST::Type::Subset
-=item RakuAST::Var::Attribute
-=item RakuAST::Var::Compiler
-=item RakuAST::Var::Doc
-=item RakuAST::Var::Dynamic
-=item RakuAST::Var::Lexical
-=item RakuAST::Var::NamedCapture
-=item RakuAST::Var::Package
-=item RakuAST::Var::PositionalCapture
-=item RakuAST::Var::Slang
-=item RakuAST::Declaration::External::Constant
-=item RakuAST::Declaration::External::Setting
-=item RakuAST::Regex::Anchor::BeginningOfLine
-=item RakuAST::Regex::Anchor::BeginningOfString
-=item RakuAST::Regex::Anchor::EndOfLine
-=item RakuAST::Regex::Anchor::EndOfString
-=item RakuAST::Regex::Anchor::LeftWordBoundary
-=item RakuAST::Regex::Anchor::RightWordBoundary
-=item RakuAST::Regex::Assertion::Alias
-=item RakuAST::Regex::Assertion::Callable
-=item RakuAST::Regex::Assertion::CharClass
-=item RakuAST::Regex::Assertion::Fail
-=item RakuAST::Regex::Assertion::InterpolatedBlock
-=item RakuAST::Regex::Assertion::InterpolatedVar
-=item RakuAST::Regex::Assertion::Lookahead
-=item RakuAST::Regex::Assertion::Named
-=item RakuAST::Regex::Assertion::Pass
-=item RakuAST::Regex::Assertion::PredicateBlock
-=item RakuAST::Regex::Assertion::Recurse
-=item RakuAST::Regex::BackReference::Named
-=item RakuAST::Regex::BackReference::Positional
-=item RakuAST::Regex::Backtrack::Frugal
-=item RakuAST::Regex::Backtrack::Greedy
-=item RakuAST::Regex::Backtrack::Ratchet
-=item RakuAST::Regex::CharClass::Any
-=item RakuAST::Regex::CharClass::BackSpace
-=item RakuAST::Regex::CharClass::CarriageReturn
-=item RakuAST::Regex::CharClass::Digit
-=item RakuAST::Regex::CharClass::Escape
-=item RakuAST::Regex::CharClass::FormFeed
-=item RakuAST::Regex::CharClass::HorizontalSpace
-=item RakuAST::Regex::CharClass::Negatable
-=item RakuAST::Regex::CharClass::Newline
-=item RakuAST::Regex::CharClass::Nul
-=item RakuAST::Regex::CharClass::Space
-=item RakuAST::Regex::CharClass::Specified
-=item RakuAST::Regex::CharClass::Tab
-=item RakuAST::Regex::CharClass::VerticalSpace
-=item RakuAST::Regex::CharClass::Word
 =item RakuAST::Regex::CharClassElement::Enumeration
 =item RakuAST::Regex::CharClassElement::Property
 =item RakuAST::Regex::CharClassElement::Rule
@@ -342,7 +198,6 @@ class ASTQuery::Matcher::AttrOp  { has Str $.op;  has $.value;    }
 =item RakuAST::Regex::InternalModifier::IgnoreCase
 =item RakuAST::Regex::InternalModifier::IgnoreMark
 =item RakuAST::Regex::InternalModifier::Ratchet
-=item RakuAST::Regex::InternalModifier::Sigspace
 =item RakuAST::Regex::Quantifier::BlockRange
 =item RakuAST::Regex::Quantifier::OneOrMore
 =item RakuAST::Regex::Quantifier::Range
@@ -977,9 +832,23 @@ multi method add-to-ast-group(ASTGroup $name, *@classes) {
 	self.add-ast-group: $name, @new-classes
 }
 
+# Register a function by name; accepts either a matcher or a Callable
+multi method add-function(Str $name, ::?CLASS:D $matcher) {
+	%functions := { %functions, self!normalize-fname($name) => -> $node { ASTQuery::Match.new(:ast($node), :matcher($matcher)).query-root-only.so } }.Map
+}
+
+multi method add-function(Str $name, Callable $fn) {
+	%functions := { %functions, self!normalize-fname($name) => $fn }.Map
+}
+
+method !normalize-fname(Str $name) { $name.subst(/^'&'/, '', :g(False)) }
+
+method !get-function(Str $name) { %functions{ self!normalize-fname($name) } }
+
 has ASTClass() @.classes;
 has ASTGroup() @.groups;
 has @.ids;
+has @.functions;
 has %.atts;
 has %.params;
 has $.child is rw;
@@ -998,6 +867,8 @@ multi method gist(::?CLASS:D: :$inside = False) {
 		(.Str for @!classes).join: ""
 	}{
 		('.' ~ .Str for @!groups).join: ""
+	}{
+		('&' ~ .Str for @!functions).join: ""
 	}{
 		('#' ~ .Str for @!ids).join: ""
 	}{
@@ -1132,6 +1003,7 @@ method ACCEPTS($node) {
 			True,
 			{:attr<classes>,    :validator<validate-class>     },
 			{:attr<groups>,     :validator<validate-groups>    },
+			{:attr<functions>,  :validator<validate-functions> },
 			{:attr<ids>,        :validator<validate-ids>       },
 			{:attr<atts>,       :validator<validate-atts>      },
 			{:attr<code>,       :validator<validate-code>      },
@@ -1152,6 +1024,22 @@ method ACCEPTS($node) {
 		#say $node.^name, " - ", $match.list if $*DEBUG;
 	}
 	$match
+}
+
+# --- functions (&function) ---
+
+multi method validate-functions($node, @funcs) {
+	print-validator-begin $node, @funcs;
+	POST print-validator-end $node, @funcs, $_;
+	([&&] do for @funcs.unique -> $fname { self.validate-function($node, $fname) })
+		?? ASTQuery::Match.new: :list[$node]
+		!! False
+}
+
+method validate-function($node, Str $fname) {
+	my $impl = self!get-function($fname) // return False;
+	note "func=$fname type=", $impl.^name, " WHAT=", $impl.WHAT.perl if %*ENV<ASTQUERY_DEBUG>;
+	$impl($node) ?? ASTQuery::Match.new(:list[$node]) !! False
 }
 
 multi method validate-code($node, @code) {
@@ -1370,75 +1258,75 @@ multi method validate-value(
 	}
 }
 
- multi method validate-value(
- 	$node,
- 	$key,
- 	ASTQuery::Matcher::AttrRel $rel
- ) {
- 	my $start = $node."$key"();
- 	return False unless $start.defined;
- 	given $rel.rel {
- 		when 'child'      { self.validate-child($start,      $rel.matcher) || False }
- 		when 'gchild'     { self.validate-gchild($start,     $rel.matcher) || False }
- 		when 'descendant' { self.validate-descendant($start, $rel.matcher) || False }
- 		default           { False }
+	multi method validate-value(
+ 		$node,
+ 		$key,
+ 		ASTQuery::Matcher::AttrRel $rel
+ 	) {
+ 		my $start = $node."$key"();
+ 		return False unless $start.defined;
+ 		given $rel.rel {
+ 			when 'child'      { self.validate-child($start,      $rel.matcher) || False }
+ 			when 'gchild'     { self.validate-gchild($start,     $rel.matcher) || False }
+ 			when 'descendant' { self.validate-descendant($start, $rel.matcher) || False }
+ 			default           { False }
+ 		}
  	}
- }
 
- method attr-leaf-value($v is copy) {
- 	return $v unless $v.defined;
- 	loop {
- 		last unless $v.^name.starts-with('RakuAST');
- 		my $id = self.get-id-field($v) // last;
- 		last unless $v.^can($id);
- 		my $next = $v."$id"();
- 		last if $next === $v;
- 		$v = $next;
+ 	method attr-leaf-value($v is copy) {
+ 		return $v unless $v.defined;
+ 		loop {
+ 			last unless $v.^name.starts-with('RakuAST');
+ 			my $id = self.get-id-field($v) // last;
+ 			last unless $v.^can($id);
+ 			my $next = $v."$id"();
+ 			last if $next === $v;
+ 			$v = $next;
+ 		}
+ 		$v
  	}
- 	$v
- }
 
- multi method validate-value(
- 	$node,
- 	$key,
- 	ASTQuery::Matcher::AttrOp $op
- ) {
- 	return False unless $node.^can($key);
- 	my $current = $node."$key"();
- 	return False unless $current.defined;
- 
- 	my $want = $op.value;
- 	my $cur-val = self.attr-leaf-value($current);
- 
- 	my $ok = do given $op.op {
- 		when 'contains' {
- 			return False unless $cur-val.defined;
- 			if $want ~~ Regex {
- 				$cur-val ~~ $want
- 			} elsif ($cur-val ~~ Str) && ($want ~~ Str) {
- 				$cur-val.contains($want)
- 			} else {
- 				False
+ 	multi method validate-value(
+ 		$node,
+ 		$key,
+ 		ASTQuery::Matcher::AttrOp $op
+ 	) {
+ 		return False unless $node.^can($key);
+ 		my $current = $node."$key"();
+ 		return False unless $current.defined;
+ 	
+ 		my $want = $op.value;
+ 		my $cur-val = self.attr-leaf-value($current);
+ 	
+ 		my $ok = do given $op.op {
+ 			when 'contains' {
+ 				return False unless $cur-val.defined;
+ 				if $want ~~ Regex {
+ 					$cur-val ~~ $want
+ 				} elsif ($cur-val ~~ Str) && ($want ~~ Str) {
+ 					$cur-val.contains($want)
+ 				} else {
+ 					False
+ 				}
  			}
- 		}
- 		when 'starts' {
- 			($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.starts-with($want)
- 		}
- 		when 'ends' {
- 			($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.ends-with($want)
- 		}
- 		when 'regex' {
- 			$cur-val ~~ $want
- 		}
- 		default { False }
- 	};
- 	$ok ?? ASTQuery::Match.new(:list[$node,]) !! False
- }
+ 			when 'starts' {
+ 				($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.starts-with($want)
+ 			}
+ 			when 'ends' {
+ 				($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.ends-with($want)
+ 			}
+ 			when 'regex' {
+ 				$cur-val ~~ $want
+ 			}
+ 			default { False }
+ 		};
+ 		$ok ?? ASTQuery::Match.new(:list[$node,]) !! False
+ 	}
 
- # Generic value matcher: compare simple values or traverse into RakuAST nodes
-
- multi method validate-value(
-
+ 	# Generic value matcher: compare simple values or traverse into RakuAST nodes
+ 
+ 	multi method validate-value(
+ 
 	$node,
 	$key,
 	$value

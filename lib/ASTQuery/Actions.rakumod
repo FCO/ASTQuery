@@ -48,6 +48,7 @@ method str-or-list:<list>($/) { make $<list>.made }
 method node($/) {
 	my %map := @<node-part>>>.made.classify({ .key }, :as{.value});
 	%map<ids> := @=.flat with %map<ids>;
+	%map<functions> := @=.flat with %map<functions>;
 	%map<atts> := %(|.map: { |.Map }) with %map<atts>;
 	%map<name> = .head with %map<name>;
 	%map<code> := @=.flat with %map<code>;
@@ -60,6 +61,7 @@ method node-part:<node>($/)       { make (:classes($<ns>.made))                 
 method node-part:<class>($/)      { make (:groups($<word>.made))                 }
 method node-part:<id>($/)         { make (:ids($<word>.made))                    }
 method node-part:<name>($/)       { make (:name($<word>.made))                   }
+method node-part:<function>($/)   { make (:functions($<word>.made))              }
 #method node-part:<*>($/)          { '*'                                          }
 #method node-part:<par-simple>($/) { ':' <word>                                   }
 #method node-part:<par-arg>($/)    { ':' <word> '(' ~ ')' \d+                     }
@@ -88,5 +90,6 @@ method node-part-attr:<a-contains>($/) { make ($<attr>.made => ASTQuery::Matcher
 method node-part-attr:<a-starts>($/)   { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<starts>,   :value(($<str> // $<val>).made))) }
 method node-part-attr:<a-ends>($/)     { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<ends>,     :value(($<str> // $<val>).made))) }
 method node-part-attr:<a-regex>($/)    { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<regex>,    :value($<str>.made))) }
+
 
 

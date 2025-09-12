@@ -1,0 +1,61 @@
+use experimental :rakuast;
+use Test;
+use ASTQuery;
+
+# Matcher-backed function: reuse a compiled selector
+{
+	my $m = ast-matcher('.call#f');
+	new-function('&f-call', $m);
+	my $ast = q:to/CODE/.AST;
+		sub f($x) { }
+		f 42;
+		sub g($y) { }
+		say 1, 2;
+	CODE
+	ok $ast.&ast-query('&f-call').list.elems >= 1, '&f-call finds f-calls';
+}
+
+
+# Callable-backed function: single-argument function calls
+{
+	new-function('&single-argument-call' => -> $n {
+		$n.^name.starts-with('RakuAST::Call')
+		&& $n.args.defined
+		&& $n.args.args.defined
+		&& $n.args.args.elems == 1
+	});
+
+	my $ast = q:to/CODE/.AST;
+		sub f($x) { }
+		f 42;
+		say 1, 2;
+	CODE
+
+	ok $ast.&ast-query('&single-argument-call').list.elems >= 1,
+		'&single-argument-call matches expected';
+}
+
+# Combining multiple &functions (AND semantics)
+{
+	# Narrow to calls that have an Int somewhere under them
+	my $ast = q:to/CODE/.AST;
+		sub f($x) { }
+		f 42;
+		say 'a', 'b';
+	CODE
+	my $res = $ast.&ast-query('&is-call >>> .int');
+	ok $res.list.elems >= 1, 'combining &is-call >>> .int finds int-calls';
+}
+
+# Selector-string-backed function
+{
+	new-function('&var-decl' => '.variable-declaration');
+	my $ast = q:to/CODE/.AST;
+		my $x = 1;
+		my $y;
+		say $x;
+	CODE
+	ok $ast.&ast-query('&var-decl').list.elems >= 1, '&var-decl finds declarations';
+}
+
+done-testing;

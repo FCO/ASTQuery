@@ -5,7 +5,7 @@ token TOP { <str-or-list> }
 
 token word { <-[\s#.\[\]=$>,~+]>+ }
 token ns { <[\w:-]>+ }
-token akey { <-[\s#.\[\]=$>,~+^$*]>+ }
+token akey { <-[\s#.\[\]=>,~+^$*]>+ }
 
 proto token str          { *                        }
 multi token str:<number> { \d+ }
@@ -36,6 +36,7 @@ multi token node-part:<node>       { <ns>                                       
 multi token node-part:<class>      { '.' <word>                                     }
 multi token node-part:<id>         { '#' <word>                                     }
 multi token node-part:<name>       { '$' <word>                                     }
+multi token node-part:<function>   { '&' <word>                                     }
 multi token node-part:<*>          { '*'                                            }
 multi token node-part:<par-simple> { ':' <word>                                     }
 multi token node-part:<par-arg>    { ':' <word> '(' ~ ')' \d+                       }
