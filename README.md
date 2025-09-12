@@ -5,6 +5,38 @@ NAME
 
 ASTQuery - Query and manipulate Raku’s Abstract Syntax Trees (RakuAST) with an expressive syntax
 
+INSTALLATION
+============
+
+- Install project dependencies (without running tests):
+  - `zef install --/test --test-depends --deps-only .`
+- Optional: install the test runner and coverage tools:
+  - `zef install --/test App::Prove6`
+  - `zef install --/test App::RaCoCo`
+
+QUICKSTART
+==========
+
+```raku
+use ASTQuery;
+
+my $code = q:to/CODE/;
+    sub f($x) { }
+    f 42;
+    say 1 * 3;
+CODE
+
+my $ast = $code.AST;
+
+# Find Apply* operator nodes where left=1 and right=3
+my $ops = $ast.&ast-query('.apply-operator[left=1, right=3]');
+say $ops.list;
+
+# Find calls that have an Int somewhere under args
+my $calls = $ast.&ast-query('&is-call[args=>>> .int]');
+say $calls.list;
+```
+
 SYNOPSIS
 ========
 
@@ -24,7 +56,7 @@ my $code = q{
 my $ast = $code.AST;
 
 # Example 1: Find 'apply-op' nodes where left operand is 1 and right operand is 3
-my $result1 = $ast.&ast-query('.apply-op[left=1, right=3]');
+my $result1 = $ast.&ast-query('.apply-operator[left=1, right=3]');
 say $result1.list;  # Outputs matching nodes
 ```
 
@@ -44,377 +76,201 @@ Output
 DESCRIPTION
 ===========
 
-ASTQuery simplifies querying and manipulating Raku’s ASTs using a powerful query language. It allows precise selection of nodes and relationships, enabling effective code analysis and transformation.
+ASTQuery provides a compact, composable query language for traversing and matching nodes in
+Raku’s RakuAST. It lets you precisely match nodes, relationships (child/descendant/ancestor), and
+attributes, capture interesting nodes, and even register custom function matchers for reuse.
 
 Key Features
 ------------
 
-  * Expressive Query Syntax: Define complex queries to match specific AST nodes.
+- Expressive Query Syntax: Define complex queries concisely.
+- Relationship Operators: Parent/child, ancestor/descendant, and ignorable-skipping variants.
+- Named Captures: Capture matched nodes for later retrieval.
+- Attribute Matching: Compare values, traverse attributes, and run regexes.
+- Custom Functions: Register reusable matchers via `&name` (built-ins included).
+- CLI Utility: Query files on disk and print results in a readable form.
 
-  * Node Relationships: Use operators to specify parent-child and ancestor-descendant relationships.
+CLI
+===
 
-  * Named Captures: Capture matched nodes for easy retrieval.
+- Run against a directory or a single file:
+  - `raku -I. bin/ast-query.raku '<selector>' [path]`
+  - If `path` is omitted, scans the current directory recursively.
+  - Scans files with extensions: `raku`, `rakumod`, `rakutest`, `rakuconfig`, `p6`, `pl6`, `pm6`.
+- Example:
+  - `raku -I. bin/ast-query.raku '.call#say >>> .int' lib/`
+- Output shows matched nodes and any captures in a human-friendly, deparsed format.
 
-  * AST Manipulation: Modify the AST for code transformations and refactoring.
-
-QUERY LANGUAGE SYNTAX
-=====================
+QUERY LANGUAGE REFERENCE
+========================
 
 Node Description
 ----------------
 
 Format:
 
-`RakuAST::Class::Name.group#id[attr1, attr2=attrvalue]$name`
+`RakuAST::Class::Name.group#id[attr1, attr2=attrvalue]$name&function`
 
 Components:
 
-  * `RakuAST::Class::Name`: (Optional) Full class name.
+- `RakuAST::Class::Name`: Optional full class name to match exactly.
+- `.group`: Optional group alias (predefined; see Groups below).
+- `#id`: Optional id value compared against the node’s “id field”.
+- `[attributes]`: Optional one or more attribute matchers (see operators below).
+- `$name`: Optional capture name (only one per node part).
+- `&function`: Optional registered function matcher. Multiple functions compose with AND.
 
-  * `.group`: (Optional) Node group (predefined).
+Relationship Operators
+----------------------
 
-  * `#id`: (Optional) Identifier attribute.
-
-  * `[attributes]`: (Optional) Attributes to match.
-
-  * `$name`: (Optional) Capture name.
-
-Note: Use only one $name per node.
-
-Operators
----------
-
-  * `>` : Left node has the right node as a child.
-
-  * `<` : Right node is the parent of the left node.
-
-  * `>>>`: Left node has the right node as a descendant (any nodes can be between them).
-
-  * `>>`: Left node has the right node as a descendant, with only ignorable nodes in between.
-
-  * `<<<`: Right node is an ancestor of the left node (any nodes can be between them).
-
-  * `<<`: Right node is an ancestor of the left node, with only ignorable nodes in between.
-
-Attribute Relation Operators (inside [attributes])
---------------------------------------------------
-
-  * `[attr=> MATCH]`     — Start from the attribute node and apply child relation with `MATCH`.
-  * `[attr=>> MATCH]`    — Start from the attribute node and apply gchild (skip ignorable) relation with `MATCH`.
-  * `[attr=>>> MATCH]`   — Start from the attribute node and apply descendant relation with `MATCH`.
-
-Notes
------
-
-  * `[attr=value]` using `=` supports literal numbers or strings, or a nested matcher/type as before.
-  * Prefer the `=>` family to express traversal from the attribute node to its nested members.
-
-Attribute Value Operators (inside [attributes])
------------------------------------------------
-
-  * `[attr~= value]` — Contains: value is substring or regex; if attribute is a RakuAST node, compares its id-field leaf when available.
-  * `[attr^= value]` — Starts-with: string prefix match on the leaf value.
-  * `[attr$= value]` — Ends-with: string suffix match on the leaf value.
-  * `[attr*=/regex/]` — Regex match on the leaf value using `/.../` literal.
-
-Details:
-
-  * When the attribute value is a RakuAST node, the matcher walks the configured id field to a comparable leaf (e.g., `.call[name]` → Name’s identifier).
-  * Non-existent attributes never match, even with truthy operators.
-  * Regex literal uses `/.../` with no embedded `/`; flags are not yet supported.
-
-Note: The space operator is no longer used.
+- `>`: Left has the right as a child.
+- `>>`: Left has the right as a descendant, skipping only “ignorable” nodes between them.
+- `>>>`: Left has the right as a descendant, allowing any nodes in between.
+- `<`: Right is the parent of the left.
+- `<<`: Right is an ancestor of the left, skipping only ignorable nodes.
+- `<<<`: Right is an ancestor of the left, allowing any nodes in between.
 
 Ignorable Nodes
 ---------------
 
-Nodes skipped by `>>` and `<<` operators:
+Skipped by `>>` and `<<`:
 
-  * `RakuAST::Block`
+- `RakuAST::Block`, `RakuAST::Blockoid`, `RakuAST::StatementList`,
+  `RakuAST::Statement::Expression`, `RakuAST::ArgList`.
 
-  * `RakuAST::Blockoid`
+Attributes: Values and Traversals
+---------------------------------
 
-  * `RakuAST::StatementList`
+- `[attr=value]`:
+  - If the attribute is a RakuAST node, the matcher follows the node’s configured id field to a
+    leaf value for comparison. Non-existent attributes never match.
+  - Literal numbers and strings, nested matchers, or types are supported.
+- Value operators on the leaf value:
+  - `[attr~= value]`: contains (substring) or regex; if `value` is a regex literal `/.../`.
+  - `[attr^= value]`: starts-with.
+  - `[attr$= value]`: ends-with.
+  - `[attr*=/regex/]`: regex match using `/.../` literal (flags not yet supported).
+- Traversal from attribute value (if it is itself a RakuAST node):
+  - `[attr=> MATCH]`: child relation from the attribute node.
+  - `[attr=>> MATCH]`: descendant via ignorable nodes.
+  - `[attr=>>> MATCH]`: descendant (any nodes).
 
-  * `RakuAST::Statement::Expression`
+Function Matchers (`&name`)
+---------------------------
 
-  * `RakuAST::ArgList`
-
-EXAMPLES
-========
-
-Example 1: Matching Specific Infix Operations
----------------------------------------------
+Register reusable matchers and reference them via `&name` inside node parts. Functions compose
+with other constraints using AND semantics.
 
 ```raku
-# Sample Raku code
-my $code = q{
-    for ^10 {
-        if $_ %% 2 {
-            say 1 * 3;
-        }
-    }
+use ASTQuery;
+
+# From a selector string
+new-function '&has-int' => 'RakuAST::Node >>> .int';
+
+# From a compiled matcher
+new-function '&f-call', ast-matcher('.call#f');
+
+# From a Callable (returns Bool for a node)
+new-function '&single-argument-call' => -> $n {
+	$n.^name.starts-with('RakuAST::Call')
+	&& $n.args.defined && $n.args.args.defined
+	&& $n.args.args.elems == 1
 };
 
-# Generate the AST
-my $ast = $code.AST;
-
-# Query to find 'apply-op' nodes where left=1 and right=3
-my $result = $ast.&ast-query('.apply-op[left=1, right=3]');
-say $result.list;  # Outputs matching 'ApplyOp' nodes
+# Using functions
+$ast.&ast-query('&has-int');
+$ast.&ast-query('&is-call&has-int');
+$ast.&ast-query('&is-call[args=>>> .int]');
 ```
 
-### Output
+Built-in functions (registered at module load):
+
+- `&is-call`, `&is-operator`, `&is-apply-operator`
+- `&is-assignment`, `&is-conditional`
+- `&has-var`, `&has-call`, `&has-int`
+
+Groups (Common Aliases)
+-----------------------
+
+These make queries shorter by avoiding full class names:
+
+- `.call` → `RakuAST::Call`
+- `.apply-operator` → `RakuAST::ApplyInfix|ApplyListInfix|ApplyPostfix|Ternary`
+- `.operator` → `RakuAST::Infixish|Prefixish|Postfixish`
+- `.conditional` → `IfWith|Unless|Without`
+- `.variable`, `.variable-usage`, `.variable-declaration`
+- `.statement`, `.expression`, `.int`, `.str`, `.ignorable`
+
+You can add your own via `add-ast-group` and `add-to-ast-group`.
+
+Captures and Results
+--------------------
+
+- `$name` captures the matched node under that name; the result object is `ASTQuery::Match`.
+- Access results:
+  - `@result.list`: all nodes that matched the entire selector.
+  - `%result.hash`: captures keyed by `$name` and id-based keys.
+- The object does Positional and Associative, so `result[0]` and `result<name>` work.
+
+More Examples
+-------------
 
 ```raku
-[
-  RakuAST::ApplyInfix.new(
-    left  => RakuAST::IntLiteral.new(1),
-    infix => RakuAST::Infix.new("*"),
-    right => RakuAST::IntLiteral.new(3)
-  )
-]
+# Call named 'say' that has an Int descendant
+$ast.&ast-query('.call#say >>> .int');
+
+# Calls whose name contains "bar"
+$ast.&ast-query('&is-call[name~= bar]');
+
+# Apply operator that uses Int operands somewhere under left or right
+$ast.&ast-query('.apply-operator[left=>>> .int]');
+
+# Composition with captures
+$ast.&ast-query('RakuAST::Infix <<< .conditional$cond .int#2$two');
 ```
 
-Explanation:
-
-  * The query `.apply-op[left=1, right=3]` matches ApplyOp nodes with left operand 1 and right operand 3.
-
-Example 2: Using the Ancestor Operator `<<<` and Named Captures
----------------------------------------------------------------
-
-```raku
-# Sample Raku code
-my $code = q{
-    for ^10 {
-        if $_ %% 2 {
-            say $_ * 3;
-        }
-    }
-};
-
-# Generate the AST
-my $ast = $code.AST;
-
-# Query to find 'Infix' nodes with any ancestor 'conditional', and capture 'IntLiteral' nodes with value 2
-my $result = $ast.&ast-query('RakuAST::Infix <<< .conditional$cond .int#2$int');
-say $result.list;  # Outputs matching 'Infix' nodes
-say $result.hash;  # Outputs captured nodes under 'cond' and 'int'
-```
-
-### Output
-
-```raku
-[
-  RakuAST::Infix.new("%%"),
-  RakuAST::Infix.new("*")
-]
-{
-  cond => [
-    RakuAST::Statement::If.new(
-      condition => RakuAST::ApplyInfix.new(
-        left  => RakuAST::Var::Lexical.new("$_"),
-        infix => RakuAST::Infix.new("%%"),
-        right => RakuAST::IntLiteral.new(2)
-      ),
-      then => RakuAST::Block.new(...)
-    )
-  ],
-  int => [
-    RakuAST::IntLiteral.new(2),
-    RakuAST::IntLiteral.new(2)
-  ]
-}
-```
-
-Explanation:
-
-  * The query `RakuAST::Infix <<< .conditional$cond .int#2$int`:
-
-  * Matches Infix nodes that have an ancestor matching `.conditional$cond`, regardless of intermediate nodes.
-
-  * Captures IntLiteral nodes with value 2 as $int.
-
-  * Access the captured nodes using $result<cond> and $result<int>.
-
-Example 3: Using the Ancestor Operator `<<` with Ignorable Nodes
-----------------------------------------------------------------
-
-```raku
-# Find 'Infix' nodes with an ancestor 'conditional', skipping only ignorable nodes
-my $result = $ast.&ast-query('RakuAST::Infix << .conditional$cond');
-say $result.list;  # Outputs matching 'Infix' nodes
-say $result.hash;  # Outputs captured 'conditional' nodes
-```
-
-Explanation:
-
-  * The query RakuAST::Infix << .conditional$cond:
-
-  * Matches Infix nodes that have an ancestor .conditional$cond, with only ignorable nodes between them.
-
-  * Captures the conditional nodes as $cond.
-
-Example 4: Using the Parent Operator < and Capturing Nodes
-----------------------------------------------------------
-
-```raku
-# Sample Raku code
-my $code = q{
-    for ^10 {
-        if $_ %% 2 {
-            say $_ * 2;
-        }
-    }
-};
-
-# Generate the AST
-my $ast = $code.AST;
-
-# Query to find 'ApplyInfix' nodes where right operand is 2 and capture them as '$op'
-my $result = $ast.&ast-query('RakuAST::Infix < .apply-op[right=2]$op');
-say $result<op>;  # Captured 'ApplyInfix' nodes
-```
-
-### Output
-
-```raku
-[
-  RakuAST::ApplyInfix.new(
-    left  => RakuAST::Var::Lexical.new("$_"),
-    infix => RakuAST::Infix.new("*"),
-    right => RakuAST::IntLiteral.new(2)
-  )
-]
-```
-
-Explanation:
-
-  * The query `RakuAST::Infix < .apply-op[right=2]$op`:
-
-  * Matches ApplyOp nodes with right operand 2 whose parent is an Infix node.
-
-  * Captures the ApplyOp nodes as $op.
-
-Example 5: Using the Descendant Operator `>>>` and Capturing Variables
-----------------------------------------------------------------------
-
-```raku
-# Sample Raku code
-my $code = q{
-    for ^10 {
-        if $_ %% 2 {
-            say $_;
-        }
-    }
-};
-
-# Generate the AST
-my $ast = $code.AST;
-
-# Query to find 'call' nodes that have a descendant 'Var' node and capture the 'Var' node as '$var'
-my $result = $ast.&ast-query('.call >>> RakuAST::Var$var');
-say $result.list;  # Outputs matching 'call' nodes
-say $result.hash;  # Outputs the 'Var' node captured as 'var'
-```
-
-### Output
-
-```raku
-[
-  RakuAST::Call::Name::WithoutParentheses.new(
-    name => RakuAST::Name.from-identifier("say"),
-    args => RakuAST::ArgList.new(
-      RakuAST::Var::Lexical.new("$_")
-    )
-  )
-]
-{ var => RakuAST::Var::Lexical.new("$_") }
-```
-
-Explanation:
-
-  * The query `.call >>> RakuAST::Var$var`:
-
-  * Matches call nodes that have a descendant Var node, regardless of intermediate nodes.
-
-  * Captures the Var node as $var.
-
-  * Access the captured Var node using $result<var>.
-
-RETRIEVING MATCHED NODES
-========================
-
-The ast-query function returns an ASTQuery object with:
-
-  * `@.list`: Matched nodes.
-
-  * `%.hash`: Captured nodes.
-
-Accessing captured nodes:
-
-```raku
-# Perform the query
-my $result = $ast.&ast-query('.call#say$call');
-
-# Access the captured node
-my $call_node = $result<call>;
-
-# Access all matched nodes
-my @matched_nodes = $result.list;
-```
-
-THE ast-query FUNCTION
-======================
-
-Usage:
-
-    :lang<raku> my $result = $ast.&ast-query('query string');
-
-Returns an ASTQuery object with matched nodes and captures.
-
-GET INVOLVED
-============
-
-Visit the [ASTQuery repository](https://github.com/FCO/ASTQuery) on GitHub for examples, updates, and contributions.
-
-How You Can Help
-----------------
-
-  * Feedback: Share your thoughts on features and usability.
-
-  * Code Contributions: Add new features or fix bugs.
-
-  * Documentation: Improve tutorials and guides.
-
-Note: ASTQuery is developed by Fernando Corrêa de Oliveira.
-
-DEBUG
-=====
-
-For debugging, use the `ASTQUERY_DEBUG` env var.
-
-![Trace example](./trace.png)
-
-CONCLUSION
-==========
-
-ASTQuery empowers developers to effectively query and manipulate Raku’s ASTs, enhancing code analysis and transformation capabilities.
-
-DESCRIPTION
-===========
-
-ASTQuery is a way to match RakuAST
-
-AUTHOR
-======
-
-Fernando Corrêa de Oliveira <fernandocorrea@gmail.com>
-
-COPYRIGHT AND LICENSE
+PROGRAMMATIC API
+================
+
+- `ast-query($ast, Str $selector)` and `ast-query($ast, $matcher)`:
+  - Run a query over a RakuAST. Returns `ASTQuery::Match`.
+- `ast-matcher(Str $selector)`:
+  - Compile a selector into a matcher object for reuse.
+- `new-function($name, $callable|$matcher|$selector)`:
+  - Register a function matcher usable as `&name`.
+- `add-ast-group($name, @classes)` / `add-to-ast-group($name, *@classes)`:
+  - Create or extend group aliases.
+- `set-ast-id($class, $id-method)`:
+  - Configure which attribute is considered the node’s id field.
+
+LIMITATIONS AND NOTES
 =====================
 
-Copyright 2024 Fernando Corrêa de Oliveira
+- Regex flags are not yet supported in `/.../` literals.
+- Only one `$name` capture per node part is supported.
+- The space operator is not used; explicit operators control relationships.
 
-This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
+DEBUGGING
+=========
 
+- Set `ASTQUERY_DEBUG=1` to print a tree of matcher decisions with deparsed node snippets.
+- Example: `ASTQUERY_DEBUG=1 raku -I. -e 'use ASTQuery; say $*PROGRAM.succ'` (adjust to your use).
+- The repository includes a `trace.png` screenshot of a debug trace.
+
+TESTING AND COVERAGE
+====================
+
+- Run tests: `prove6 -I. t`
+- Check coverage (after installing App::RaCoCo): `raku -I. tools/coverage.raku`
+- Pre-commit coverage check: `raku -I. tools/coverage-check.raku`
+
+CONTRIBUTING
+============
+
+- Feedback and PRs welcome!
+- Follow Conventional Commits for messages (feat, fix, docs, test, chore, …).
+
+LICENSE
+=======
+
+Artistic License 2.0. Copyright 2024 Fernando Corrêa de Oliveira.
