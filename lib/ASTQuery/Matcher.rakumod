@@ -1286,8 +1286,8 @@ multi method validate-ids($node, $id) {
 }
 
 method validate-atts($node, %atts) {
-	print-validator-begin $node, %atts unless $node ~~ RakuAST::Name;
-	POST print-validator-end $node, $_ unless $node ~~ RakuAST::Name;
+	print-validator-begin $node, %atts;
+	POST print-validator-end $node, $_;
 	return ASTQuery::Match.new: :list[$node,]
 		if ASTQuery::Match.merge-and: |%atts.kv.map: -> $key, $value is copy {
 			$value = $value.($node) if $value ~~ Callable;
@@ -1297,29 +1297,67 @@ method validate-atts($node, %atts) {
 	False
 }
 
+proto method validate-value($node, $key, $value) {
+	print-validator-begin $node, $value;
+	POST print-validator-end $node, $value, $_;
+	{*} || False
+}
+
 multi method validate-value($node, $key, $ where * =:= False) {
-	print-validator-begin $node, True;
-	POST print-validator-end $node, True, $_;
 	False
 }
 
 multi method validate-value($node, $key, $ where * =:= True) {
-	print-validator-begin $node, True;
-	POST print-validator-end $node, True, $_;
 	ASTQuery::Match.new: :list[$node,]
 }
 
+multi method validate-value(
+	$node where !*.^name.starts-with("RakuAST"),
+	$key,
+	$value
+) {
+	$value.ACCEPTS($node) && ASTQuery::Match.new(:list[$node,])
+}
+
+multi method validate-value(
+	$node,
+	$key where !$node.^can($key),
+	$
+) {
+	False
+}
+
+multi method validate-value(
+	$node,
+	$key where *.not,
+	$
+) {
+	False
+}
+
+multi method validate-value(
+	$node,
+	$key,
+	::?CLASS $value
+) {
+	my Any $nnode = $node."$key"();
+	$value.ACCEPTS($nnode)
+	&& ASTQuery::Match.new(:list[$nnode,])
+}
+
+multi method validate-value(
+	$node,
+	$key,
+	Mu:U $value
+) {
+	do if $node."$key"() ~~ $value {
+		ASTQuery::Match.new(:list[$node,])
+	} else {
+		False
+	}
+}
+
 multi method validate-value($node, $key, $value) {
-	print-validator-begin $node, $value;
-	POST print-validator-end $node, $value, $_;
-	do if $node.^name.starts-with("RakuAST") {
-		return False unless $key;
-		return False unless $node.^can: $key; # it can be a problem if $key is 'none', for example
-		my Any $nnode = $node."$key"();
-		$value ~~ Mu:U
-			?? ($nnode ~~ $value ?? ASTQuery::Match.new(:list[$node,]) !! False)
-			!! self.validate-value($nnode, $.get-id-field($nnode), $value)
-	} else { 
-		$value.ACCEPTS($node) && ASTQuery::Match.new(:list[$node,])
-	} || False
+	my Any $nnode = $node."$key"();
+	self.validate-value($nnode, $.get-id-field($nnode), $value)
 }
