@@ -1,0 +1,65 @@
+use experimental :rakuast;
+use ASTQuery;
+use Test;
+
+# Tests for attribute operators on values: ~= ^= $= *=
+# They operate on the attribute's value; if value is a RakuAST node,
+# the node's id field (per %id map) is used when available.
+
+# 1) Contains ~= on call name
+{
+    my $ast = q{ say 42; note 1 }.AST;
+    ok $ast.&ast-query('.call[name~=ay]').Bool, 'name~=ay matches say';
+    ok !$ast.&ast-query('.call[name~=zzz]').Bool, 'name~=zzz does not match';
+}
+
+# 2) Starts ^= and Ends $= on Names
+{
+    my $ast = q{ say 42; put 1 }.AST;
+    ok $ast.&ast-query('.call[name^=s]').Bool, 'name^=s matches say';
+    ok $ast.&ast-query('.call[name$=ut]').Bool, 'name$=ut matches put';
+    ok !$ast.&ast-query('.call[name^=z]').Bool, 'name^=z does not match';
+}
+
+# 3) Regex *= on names
+{
+    my $ast = q{ say 42; note 1 }.AST;
+    ok $ast.&ast-query('.call[name*=/n.t/]').Bool, 'name*=/n.t/ matches note';
+    ok !$ast.&ast-query('.call[name*=/xyz/]').Bool, 'name*=/xyz/ does not match';
+}
+
+# 4) Contains on nested attr id fields: apply-operator infix operator contains '+'
+{
+    my $ast = q{ $ = 1 + 2; 3 * 4 }.AST;
+    ok $ast.&ast-query('.apply-operator[infix~=+]').Bool, 'infix~=+ matches plus';
+    ok !$ast.&ast-query('.apply-operator[infix~=zz]').Bool, 'infix~=zz does not match';
+}
+
+# 5) Works with non-existent attribute -> never matches
+{
+    my $ast = q{ say 42 }.AST;
+    ok !$ast.&ast-query('.call[nope~=x]').Bool, 'non-existent attr with op does not match';
+}
+
+# 6) Works when attribute is a literal Str value
+{
+    my $ast = q:to/END/.AST;
+        my $x = "abc";
+        say $x;
+    END
+    # Match a StrLiteral whose value contains b
+    ok $ast.&ast-query('.str[value~=b]').Bool, 'literal value contains b';
+    ok !$ast.&ast-query('.str[value~=Z]').Bool, 'literal value not contains Z';
+}
+
+# 7) Edge: when id field not found, fall back to .Str for contains/starts/ends
+{
+    # Construct a tiny AST fragment where attribute value is some node without id; use Block
+    my $ast = q:to/END/.AST;
+        -> $x { $x }
+    END
+    # The PointyBlock has a body Block. We check that asking contains on body doesn't explode; likely False.
+    ok !$ast.&ast-query('RakuAST::PointyBlock[body~=foo]').Bool, 'non-string id fallback does not match';
+}
+
+done-testing;

@@ -5,11 +5,13 @@ token TOP { <str-or-list> }
 
 token word { <-[\s#.\[\]=$>,~+]>+ }
 token ns { <[\w:-]>+ }
+token akey { <-[\s#.\[\]=$>,~+^$*]>+ }
 
 proto token str          { *                        }
 multi token str:<number> { \d+ }
 multi token str:<double> { '"' ~ '"' $<str>=<-["]>* }
 multi token str:<simple> { "'" ~ "'" $<str>=<-[']>* }
+multi token str:<regex>  { '/' ~ '/' $<regex>=<-[/]>+ }
 
 proto token list           { *                                  }
 multi token list:<descen>  { <node> \s* '>>>' \s* <str-or-list> }
@@ -19,7 +21,7 @@ multi token list:<ascend>  { <node> \s* '<<<' \s* <str-or-list> }
 multi token list:<gparent> { <node> \s* '<<'  \s* <str-or-list> }
 multi token list:<parent>  { <node> \s* '<'   \s* <str-or-list> }
 #multi token list:<many>   { <node> \s* ',' \s* <str-or-list> }
-#multi token list:<after>  { <node> \s+ '+' \s* <str-or-list> }
+#multi token list:<after>  { <node> '\s+ '+' \s* <str-or-list> }
 #multi token list:<before> { <node> \s* '~' \s* <str-or-list> }
 multi token list:<simple> { <node>                               }
 
@@ -42,10 +44,15 @@ multi token node-part:<code>       { <code>                                     
 
 token code { '{' ~ '}' $<code>=.*? }
 proto token node-part-attr {*}
-multi token node-part-attr:<block>      { <word>  '=' <code> }
-multi token node-part-attr:<a-value>    { <word>  '=' <str-or-list> }
-multi token node-part-attr:<a-contains> { <word> '~=' <str-or-list> }
-multi token node-part-attr:<a-starts>   { <word> '^=' <str-or-list> }
-multi token node-part-attr:<a-ends>     { <word> '$=' <str-or-list> }
-multi token node-part-attr:<a-regex>    { <word> '*=' <str-or-list> }
-multi token node-part-attr:<exists>     { <word>                    }
+# Attribute relation operators starting from the attribute node
+multi token node-part-attr:<arel-descen>    { <akey> '=>>>' \s* <str-or-list> }
+multi token node-part-attr:<arel-gchild>    { <akey> '=>>'  \s* <str-or-list> }
+multi token node-part-attr:<arel-child>     { <akey> '=>'   \s* <str-or-list> }
+# Attribute value (literal or nested matcher)
+multi token node-part-attr:<block>      { <akey>  '=' <code> }
+multi token node-part-attr:<a-value>    { <akey>  '=' <str-or-list> }
+multi token node-part-attr:<a-contains> { $<attr>=<akey> '~=' [ <str> | $<val>=<akey> ] }
+multi token node-part-attr:<a-starts>   { $<attr>=<akey> '^=' [ <str> | $<val>=<akey> ] }
+multi token node-part-attr:<a-ends>     { $<attr>=<akey> '$=' [ <str> | $<val>=<akey> ] }
+multi token node-part-attr:<a-regex>    { $<attr>=<akey> '*=' <str> }
+multi token node-part-attr:<exists>     { <akey>                    }

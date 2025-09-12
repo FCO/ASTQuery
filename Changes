@@ -2,6 +2,13 @@ Revision history for ASTQuery
 
 {{$NEXT}}
 
+    - feat: attribute value operators in matchers: `~=`, `^=`, `$=`, `*=`
+      * Grammar: add `akey` for attr keys/identifiers; add `/.../` regex literal
+      * Actions: build `AttrOp` nodes; construct regex from literal
+      * Matcher: implement `AttrOp` handling and `attr-leaf-value` to walk id-field chain
+      * Tests: new `t/09-attr-ops.rakutest` covering contains/starts/ends/regex and edge cases
+    - Docs: document attribute value operators in README and module Pod
+
     - Matcher: expand built‑in RakuAST groups and add ergonomic aliases (.operator, .apply-operator, .variable[-usage|-declaration], .assignment); enrich id-field mapping across classes
     - Debug: gate validator logging behind ASTQUERY_DEBUG; make end printer tolerant; stabilize caller tracking; reduce noisy Name attribute logs
     - Matching: allow Type-based attribute checks on nested nodes; improve validate-ids for variable declarations (#x without sigil)

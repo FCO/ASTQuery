@@ -96,6 +96,33 @@ Operators
 
   * `<<`: Right node is an ancestor of the left node, with only ignorable nodes in between.
 
+Attribute Relation Operators (inside [attributes])
+--------------------------------------------------
+
+  * `[attr=> MATCH]`     — Start from the attribute node and apply child relation with `MATCH`.
+  * `[attr=>> MATCH]`    — Start from the attribute node and apply gchild (skip ignorable) relation with `MATCH`.
+  * `[attr=>>> MATCH]`   — Start from the attribute node and apply descendant relation with `MATCH`.
+
+Notes
+-----
+
+  * `[attr=value]` using `=` supports literal numbers or strings, or a nested matcher/type as before.
+  * Prefer the `=>` family to express traversal from the attribute node to its nested members.
+
+Attribute Value Operators (inside [attributes])
+-----------------------------------------------
+
+  * `[attr~= value]` — Contains: value is substring or regex; if attribute is a RakuAST node, compares its id-field leaf when available.
+  * `[attr^= value]` — Starts-with: string prefix match on the leaf value.
+  * `[attr$= value]` — Ends-with: string suffix match on the leaf value.
+  * `[attr*=/regex/]` — Regex match on the leaf value using `/.../` literal.
+
+Details:
+
+  * When the attribute value is a RakuAST node, the matcher walks the configured id field to a comparable leaf (e.g., `.call[name]` → Name’s identifier).
+  * Non-existent attributes never match, even with truthy operators.
+  * Regex literal uses `/.../` with no embedded `/`; flags are not yet supported.
+
 Note: The space operator is no longer used.
 
 Ignorable Nodes

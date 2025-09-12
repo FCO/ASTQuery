@@ -107,6 +107,19 @@ Note: Use only one $name per node.
 
 Note: The space operator is no longer used.
 
+=head2 Attribute Value Operators
+
+Inside `[attributes]` you can apply value operators to an attribute, comparing against a literal string/number, an unquoted identifier, or a regex literal:
+
+=item `[attr~= value]` — Contains: substring or regex match on the attribute's leaf value
+=item `[attr^= value]` — Starts-with
+=item `[attr$= value]` — Ends-with
+=item `[attr*=/regex/]` — Regex match using `/.../` literal
+
+The matcher walks nested RakuAST nodes via their configured id fields to reach a comparable leaf value (e.g., `.call[name]` → Name’s identifier). Non-existent attributes never match.
+
+Flags in regex literals are not yet supported; the grammar accepts `/.../` without embedded `/`.
+
 =head2 Ignorable Nodes
 
 Nodes skipped by `>>` and `<<` operators:

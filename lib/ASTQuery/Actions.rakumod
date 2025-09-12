@@ -1,14 +1,17 @@
 use ASTQuery::Matcher;
+use MONKEY-SEE-NO-EVAL;
 unit grammar ASTQuery::Actions;
 
 method TOP($/) { make $<str-or-list>.made }
 
 method word($/) { make $/.Str }
 method ns($/)   { make $/.Str }
+method akey($/)  { make $/.Str }
 
 method str:<number>($/) { make $/.Int }
 method str:<double>($/) { make $<str>.Str }
 method str:<simple>($/) { make $<str>.Str }
+method str:<regex>($/)  { make EVAL "rx/" ~ $<regex>.Str ~ "/" }
 
 method list:<descen>($/)  {
 	make my $node = $<node>.made;
@@ -65,11 +68,25 @@ method node-part:<code>($/)       { make (:code($<code>.made))                  
 
 method code($/) { my $code = Q|sub ($_?, :match($/)) { | ~ $<code>.Str ~ Q| }|; make $code.AST.EVAL }
 
-method node-part-attr:<exists>($/)     { make ($<word>.made => True)                }
-method node-part-attr:<block>($/)      { make ($<word>.made => $<code>.made)        }
-method node-part-attr:<a-value>($/)    { make ($<word>.made => $<str-or-list>.made) }
-#method node-part-attr:<a-contains>($/) { '[' ~ ']' [ <word> '~=' [ <str> | <list> ] ] }
-#method node-part-attr:<a-starts>($/)   { '[' ~ ']' [ <word> '^=' [ <str> | <list> ] ] }
-#method node-part-attr:<a-ends>($/)     { '[' ~ ']' [ <word> '$=' [ <str> | <list> ] ] }
-#method node-part-attr:<a-regex>($/)    { '[' ~ ']' [ <word> '*=' [ <str> | <list> ] ] }
+method node-part-attr:<exists>($/)     { make ($<akey>.made => True)                }
+method node-part-attr:<block>($/)      { make ($<akey>.made => $<code>.made)        }
+# '=' now accepts only literal strings or numbers via <str>
+method node-part-attr:<a-value>($/)    { make ($<akey>.made => $<str-or-list>.made) }
+
+# Attribute relation operators on attribute value
+method node-part-attr:<arel-child>($/)  {
+	make ($<akey>.made => ASTQuery::Matcher::AttrRel.new(:rel<child>, :matcher($<str-or-list>.made)))
+}
+method node-part-attr:<arel-gchild>($/) {
+	make ($<akey>.made => ASTQuery::Matcher::AttrRel.new(:rel<gchild>, :matcher($<str-or-list>.made)))
+}
+method node-part-attr:<arel-descen>($/) {
+	make ($<akey>.made => ASTQuery::Matcher::AttrRel.new(:rel<descendant>, :matcher($<str-or-list>.made)))
+}
+
+method node-part-attr:<a-contains>($/) { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<contains>, :value(($<str> // $<val>).made))) }
+method node-part-attr:<a-starts>($/)   { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<starts>,   :value(($<str> // $<val>).made))) }
+method node-part-attr:<a-ends>($/)     { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<ends>,     :value(($<str> // $<val>).made))) }
+method node-part-attr:<a-regex>($/)    { make ($<attr>.made => ASTQuery::Matcher::AttrOp.new(:op<regex>,    :value($<str>.made))) }
+
 
