@@ -2,6 +2,13 @@ Revision history for ASTQuery
 
 {{$NEXT}}
 
+    - Matcher: expand built‑in RakuAST groups and add ergonomic aliases (.operator, .apply-operator, .variable[-usage|-declaration], .assignment); enrich id-field mapping across classes
+    - Debug: gate validator logging behind ASTQUERY_DEBUG; make end printer tolerant; stabilize caller tracking; reduce noisy Name attribute logs
+    - Matching: allow Type-based attribute checks on nested nodes; improve validate-ids for variable declarations (#x without sigil)
+    - Output: improve matcher gist and handle DEPARSE failures gracefully
+    - Tests: add coverage and matcher suites, extend group/id mapping checks, and split debug-path coverage
+    - Docs/Tooling: update AGENTS guidance; refresh coverage baseline
+
 0.0.3  2025-03-26T10:07:08Z
     - Remove deleted RakuAST classes
 
