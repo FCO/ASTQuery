@@ -1,0 +1,48 @@
+use experimental :rakuast;
+use ASTQuery;
+use Test;
+
+# Attribute-relation operators on attribute values:
+#   [attr=>  <selector>]  child of attribute node
+#   [attr=>> <selector>]  gchild (skip ignorable) of attribute node
+#   [attr=>>> <selector>] descendant of attribute node
+
+# Case A: ArgList has an IntLiteral as direct child
+{
+	my $ast = q{ say 42 }.AST;
+
+	ok $ast.&ast-query('.call[args=> .int]').Bool,
+		".call[args=> .int] matches when ArgList contains Int child";
+
+	ok $ast.&ast-query('.call[args=>> .int]').Bool,
+		".call[args=>> .int] also matches (same as child here)";
+
+	ok $ast.&ast-query('.call[args=>>> .int]').Bool,
+		".call[args=>>> .int] matches via descendant as well";
+}
+
+# Case B: ArgList contains an ApplyInfix; Ints are deeper descendants
+{
+	my $ast = q{ say 1 + 2 }.AST;
+
+	ok !$ast.&ast-query('.call[args=> .int]').Bool,
+		".call[args=> .int] does not match when Int is not a direct child";
+
+	ok !$ast.&ast-query('.call[args=>> .int]').Bool,
+		".call[args=>> .int] still does not match (no ignorable in-between)";
+
+	ok $ast.&ast-query('.call[args=> .apply-operator]').Bool,
+		".call[args=> .apply-operator] matches ApplyInfix as direct child";
+
+	ok $ast.&ast-query('.call[args=>>> .int]').Bool,
+		".call[args=>>> .int] matches Int via descendant from ArgList";
+}
+
+# Negative: non-existent attribute with relation never matches
+{
+	my $ast = q{ say 42 }.AST;
+	ok !$ast.&ast-query('.call[nope=> .int]').Bool,
+		"attribute relation fails when attribute does not exist";
+}
+
+done-testing;
