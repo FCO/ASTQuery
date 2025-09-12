@@ -7,7 +7,7 @@ Revision history for ASTQuery
     - Matching: allow Type-based attribute checks on nested nodes; improve validate-ids for variable declarations (#x without sigil)
     - Output: improve matcher gist and handle DEPARSE failures gracefully
     - Tests: add coverage and matcher suites, extend group/id mapping checks, and split debug-path coverage
-    - Docs/Tooling: update AGENTS guidance; refresh coverage baseline
+    - Docs/Tooling: update AGENTS guidance; set coverage baseline to 89.5%
 
 0.0.3  2025-03-26T10:07:08Z
     - Remove deleted RakuAST classes
