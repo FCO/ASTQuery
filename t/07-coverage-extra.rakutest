@@ -1,0 +1,63 @@
+use Test;
+use ASTQuery;
+use ASTQuery::Matcher;
+use experimental :rakuast;
+
+# Exercise debug paths and edge branches to raise coverage
+%*ENV<ASTQUERY_DEBUG> = 1;
+
+my $*ERR = class :: { method print(|) {} };
+
+# Sample code with a mix of constructs
+my $code = q:to/END/;
+    my $x = 1;
+    my @a = <a b>;
+    if $x {
+        say $x + 2;
+    }
+    say 42;
+    say "hi";
+    sub foo() { }
+END
+my $ast = $code.AST;
+
+# 1) Debug path + exists attribute True branch
+{
+    my $m = $ast.&ast-query('.apply-operator[left]');
+    ok $m.list.grep({ .^name ~~ /Apply(Infix|ListInfix|Postfix)/ }).elems >= 1,
+        'exists attr triggers validate-value True branch under debug';
+}
+
+# 2) Type-based nested attribute check (Mu:U type match)
+{
+    my $m = $ast.&ast-query('.apply-operator[right=RakuAST::IntLiteral]');
+    ok $m.list.elems >= 1, 'Type-based attribute match on nested node (right=IntLiteral)';
+}
+
+# 3) Callable attribute returning False -> validate-value False branch
+{
+    my $m = $ast.&ast-query('.apply-operator[never={ False }]');
+    ok !$m, 'Callable attr returning False yields no match (False branch)';
+}
+
+# 4) add-ast-group + add-to-ast-group and query via new group
+{
+    add-ast-group 'tmp', [RakuAST::IntLiteral];
+    add-to-ast-group 'tmp', 'RakuAST::StrLiteral';
+
+    my $m = $ast.&ast-query('.tmp');
+    my @kinds = $m.list.map(*.^name).unique;
+    ok @kinds.grep(*.ends-with('IntLiteral')).elems || @kinds.grep(*.ends-with('StrLiteral')).elems,
+        'custom group matches after add-ast-group and add-to-ast-group';
+}
+
+# 5) set-ast-id failure path (invalid id method)
+{
+    dies-ok { ASTQuery::set-ast-id 'RakuAST::Sub', 'no-such-method' },
+        'set-ast-id fails when id method does not exist';
+}
+
+# Keep debug enabled for this file only
+%*ENV<ASTQUERY_DEBUG>:delete; # reset for any following tests
+
+done-testing;
