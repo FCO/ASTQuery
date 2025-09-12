@@ -1,0 +1,38 @@
+use experimental :rakuast;
+use ASTQuery;
+use ASTQuery::Matcher;
+use ASTQuery::Match;
+use Test;
+
+# Build simple nodes for targeted matcher tests
+my \call = RakuAST::Call::Name.new(
+	name => RakuAST::Name.from-identifier("say"),
+	args => RakuAST::ArgList.new,
+);
+
+# get-id-field: returns Nil for unmapped classes (e.g., CompUnit)
+{
+	my $mm = ASTQuery::Matcher.new;
+	my $cu = q{ say 42 }.AST;
+	is-deeply $mm.get-id-field($cu), Nil, 'get-id-field returns Nil for unmapped class';
+}
+
+# validate-ids: handles duplicates and succeeds when any matches
+{
+	my $got = ASTQuery::Matcher.validate-ids: call, <say nope say>;
+	ok $got, 'validate-ids succeeds with duplicates when one id matches';
+}
+
+# # validate-atts: value as Type object should ACCEPTS nested node (name => RakuAST::Name)
+# {
+# 	ok ASTQuery::Matcher.validate-atts(call, %(name => RakuAST::Name)),
+# 		'validate-atts accepts Type object and matches nested node';
+# }
+
+# set-ast-id: error path when method does not exist on class
+{
+	throws-like { ASTQuery::Matcher.set-ast-id('RakuAST::Class', 'nope') }, X::AdHoc,
+		'set-ast-id fails when id method missing on class';
+}
+
+done-testing;

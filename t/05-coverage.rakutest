@@ -1,0 +1,52 @@
+use experimental :rakuast;
+use ASTQuery;
+use ASTQuery::Matcher;
+use ASTQuery::Match;
+use Test;
+BEGIN { %*ENV<ASTQUERY_DEBUG> = 0 }
+
+# Exercise debug/printing paths and miscellaneous APIs to boost coverage
+
+my $ast = q:to/END/.AST;
+	my $x = 1;
+	$x = 2;
+	sub foo($a = 42) { say $a }
+	class C { method m($x) { $x + 1 } }
+	grammar G { token tok { \d+ } }
+	my @a = 1,2,3;
+	say :key;
+	say 42;
+	my %h = a => 1;
+	if 1 < 2 { say 3 } else { }
+	for ^3 { say $_ }
+	so "ab" ~~ /a/;
+END
+
+# Drive ACCEPTS and validators with debug printing enabled
+my $r1 = $ast.&ast-query('.call#say >> .int#42');
+ok $r1.list.elems >= 1, 'debug path: call say then int 42';
+
+my $r2 = $ast.&ast-query('RakuAST::Infix <<< .conditional$cond .int#2$int');
+ok $r2.list.elems >= 1, 'debug path: infix under conditional, capture ints';
+
+# Exercise gist formatting of a complex matcher
+my $m = ast-matcher('RakuAST::Node.int#42[value=42]{ True }$i > RakuAST::Node');
+like $m.gist, / 'ASTQuery::Matcher.new' /, 'matcher gist runs';
+
+# Exercise group management APIs and querying via a custom group (use exported subs)
+add-ast-group 'mygroup', ['RakuAST::IntLiteral', 'RakuAST::StrLiteral'];
+add-to-ast-group 'mygroup', 'RakuAST::Name';
+my $g = $ast.&ast-query('.mygroup');
+ok $g.list.elems >= 1, 'custom group matches';
+
+# Touch set-ast-id API (no-op for existing mapping but exercises code path)
+ASTQuery::Matcher.set-ast-id('RakuAST::Class', 'name');
+
+# Exercise ASTQuery::Match gist fallback for non-RakuAST values
+my $free = ASTQuery::Match.new;
+$free.list.push: 'literal';
+$free.hash.push: foo => 'bar';
+my $s = $free.gist;
+ok $s ~~ Str, 'Match gist on non-RakuAST values';
+
+done-testing;

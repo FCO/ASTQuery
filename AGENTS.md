@@ -21,3 +21,4 @@ AGENTS Guide for ASTQuery (Raku 6.d)
 - Coverage: `zef install --/test App::RaCoCo` (once). Run `raku -I. tools/coverage.raku` to compute total coverage; it prints `percent=<number>`.
 - Pre-commit check: Before every commit, run `raku -I. tools/coverage-check.raku` which updates `.coverage-baseline` and tells you if coverage decreased vs. last commit.
 - Commits: Follow Conventional Commits (feat, fix, docs, chore, refactor, test, perf, build, ci, revert); imperative mood; optional scope; add body/footers when relevant (e.g., BREAKING CHANGE:, Closes #123).
+- Independent of what language is being used on conversation, the generated code, comments, documentation, etc will ALWAY be in English.

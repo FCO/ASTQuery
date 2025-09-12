@@ -146,4 +146,65 @@ for %(
 	;
 }
 
+# --- ergonomic group aliases and new groups ---
+{
+	my $ast = q{
+		my $x = 1;
+		$x = 2;
+		say 1 + 2;
+	}.AST;
+
+	my $ops = $ast.&ast-query('.operator');
+	ok $ops.list.grep({ .^name ~~ /Infix|Prefix|Postfix/ }).elems >= 1,
+		'operator group finds operator nodes';
+
+	my $apply_ops = $ast.&ast-query('.apply-operator');
+	ok $apply_ops.list.grep({ .^name ~~ /Apply(Infix|ListInfix|Postfix)|Ternary/ }).elems >= 1,
+		'apply-operator group finds apply nodes';
+
+	my $vars = $ast.&ast-query('.variable-usage');
+	ok $vars.list.grep({ .^name ~~ /Var/ }).elems >= 1,
+		'variable-usage matches Var nodes';
+
+	my $decls = $ast.&ast-query('.variable-declaration');
+	ok $decls.list.grep({ .^name ~~ /VarDeclaration/ }).elems >= 1,
+		'variable-declaration matches declaration nodes';
+
+	my $assigns = $ast.&ast-query('.assignment');
+	my @kinds = $assigns.list.map(*.^name).unique;
+	ok @kinds.grep(*.ends-with('Assignment')).elems || @kinds.grep(*.contains('Initializer::Assign')).elems,
+		'assignment group matches assignment-like nodes';
+}
+
+# --- #id mapping coverage ---
+{
+	my $ast = q:to/END/.AST;
+		my $x = 1;
+		$x = 2;
+		sub foo() { }
+		class MyClass { }
+		grammar G { token tok { \d+ } }
+		say :key;
+		my %h = a => 1;
+	END
+
+	# Calls: .call#say
+	ok $ast.&ast-query('.call#say').list.elems >= 1, 'call#say matches Call by name';
+
+	# Variables: usages and declarations
+	ok $ast.&ast-query('.variable-usage#x').list.elems >= 1, 'variable-usage#x matches variable usages';
+	ok $ast.&ast-query('.variable-declaration#x').list.elems >= 1, 'variable-declaration#x matches var decls';
+
+	# Routines and packages
+	ok $ast.&ast-query('RakuAST::Sub#foo').list.elems >= 1, 'Sub#foo matches sub by name';
+	ok $ast.&ast-query('RakuAST::Class#MyClass').list.elems >= 1, 'Class#MyClass matches class by name';
+
+	# Regex declaration
+	ok $ast.&ast-query('RakuAST::TokenDeclaration#tok').list.elems >= 1, 'TokenDeclaration#tok matches token';
+
+	# Pairs
+	ok $ast.&ast-query('RakuAST::ColonPair#key').list.elems >= 1, 'ColonPair#key matches :key';
+	ok $ast.&ast-query('RakuAST::FatArrow#a').list.elems >= 1, 'FatArrow#a matches a => 1';
+}
+
 done-testing

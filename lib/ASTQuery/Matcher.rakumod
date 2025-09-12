@@ -3,7 +3,6 @@ use ASTQuery::Match;
 use ASTQuery::HighLighter;
 unit class ASTQuery::Matcher;
 
-my $DEBUG = %*ENV<ASTQUERY_DEBUG>;
 
 =head1 List of RakuAST classes
 
@@ -392,10 +391,28 @@ my %groups is Map = (
 		RakuAST::DottyInfixish,
 		RakuAST::FunctionInfix,
 		RakuAST::Infix,
+		RakuAST::Prefix,
+		RakuAST::Postfix,
 		RakuAST::Infixish,
 		RakuAST::MetaInfix,
+		RakuAST::MetaInfix::Assign,
+		RakuAST::MetaInfix::Cross,
+		RakuAST::MetaInfix::Hyper,
+		RakuAST::MetaInfix::Negate,
+		RakuAST::MetaInfix::Reverse,
+		RakuAST::MetaInfix::Sequence,
+		RakuAST::MetaInfix::Zip,
 		RakuAST::Prefixish,
-		RakuAST::Postfixish
+		RakuAST::Postfixish,
+		RakuAST::Expression,
+		RakuAST::ExpressionThunk,
+		RakuAST::FatArrow,
+		RakuAST::Feed,
+		RakuAST::Postfix::Literal,
+		RakuAST::Postfix::Power,
+		RakuAST::Postfix::Vulgar,
+		RakuAST::Ternary,
+		RakuAST::Mixin,
 	],
 	literal => [
 		RakuAST::ComplexLiteral,
@@ -405,36 +422,99 @@ my %groups is Map = (
 		RakuAST::RatLiteral,
 		RakuAST::VersionLiteral,
 		RakuAST::Constant,
-		RakuAST::Literal
+		RakuAST::Literal,
+		RakuAST::Heredoc,
+		RakuAST::Heredoc::InterpolatedWhiteSpace,
+		RakuAST::QuotedString,
+		RakuAST::QuoteWordsAtom,
 	],
 	statement => [
 		RakuAST::Block,
 		RakuAST::BlockStatementSensitive,
 		RakuAST::BlockThunk,
 		RakuAST::Blockoid,
+		RakuAST::PointyBlock,
 		RakuAST::Statement,
 		RakuAST::StatementList,
 		RakuAST::StatementSequence,
 		RakuAST::StatementModifier,
+		RakuAST::StatementModifier::Condition::Thunk,
+		RakuAST::StatementModifier::For::Thunk,
 		RakuAST::StatementPrefix,
 		RakuAST::Statement::Catch,
 		RakuAST::Statement::Control,
+		RakuAST::Statement::Default,
+		RakuAST::Statement::Empty,
+		RakuAST::Statement::ExceptionHandler,
+		RakuAST::Statement::Expression,
+		RakuAST::Statement::For,
+		RakuAST::Statement::Given,
 		RakuAST::Statement::If,
-		RakuAST::Statement::Loop
+		RakuAST::Statement::IfWith,
+		RakuAST::Statement::Import,
+		RakuAST::Statement::Loop,
+		RakuAST::Statement::Need,
+		RakuAST::Statement::Require,
+		RakuAST::Statement::Unless,
+		RakuAST::Statement::Use,
+		RakuAST::Statement::When,
+		RakuAST::Statement::Whenever,
+		RakuAST::Statement::With,
+		RakuAST::Statement::Without,
+		RakuAST::StatementModifier::Given,
+		RakuAST::StatementModifier::If,
+		RakuAST::StatementModifier::Loop,
+		RakuAST::StatementModifier::Unless,
+		RakuAST::StatementModifier::Until,
+		RakuAST::StatementModifier::When,
+		RakuAST::StatementModifier::While,
+		RakuAST::StatementModifier::With,
+		RakuAST::StatementModifier::Without,
+		RakuAST::StatementPrefix::Blorst,
+		RakuAST::StatementPrefix::CallMethod,
+		RakuAST::StatementPrefix::Do,
+		RakuAST::StatementPrefix::Eager,
+		RakuAST::StatementPrefix::Gather,
+		RakuAST::StatementPrefix::Hyper,
+		RakuAST::StatementPrefix::Lazy,
+		RakuAST::StatementPrefix::Once,
+		RakuAST::StatementPrefix::Quietly,
+		RakuAST::StatementPrefix::Race,
+		RakuAST::StatementPrefix::React,
+		RakuAST::StatementPrefix::Sink,
+		RakuAST::StatementPrefix::Start,
+		RakuAST::StatementPrefix::Supply,
+		RakuAST::StatementPrefix::Thunky,
+		RakuAST::StatementPrefix::Try,
+		RakuAST::StatementPrefix::Wheneverable,
 	],
 	declaration => [
 		RakuAST::Declaration,
 		RakuAST::Declaration::External,
 		RakuAST::Declaration::Import,
 		RakuAST::Declaration::LexicalPackage,
+		RakuAST::Declaration::ResolvedConstant,
+		RakuAST::Declaration::External::Constant,
+		RakuAST::Declaration::External::Setting,
 		RakuAST::Var,
 		RakuAST::NamedArg,
 		RakuAST::Parameter,
+		RakuAST::ParameterDefaultThunk,
+		RakuAST::ParameterTarget,
+		RakuAST::ParameterTarget::Term,
+		RakuAST::ParameterTarget::Var,
+		RakuAST::ParameterTarget::Whatever,
 		RakuAST::Signature,
 		RakuAST::Class,
 		RakuAST::Role,
+		RakuAST::RoleBody,
+		RakuAST::Role::ResolveInstantiations,
+		RakuAST::Role::TypeEnvVar,
 		RakuAST::Module,
-		RakuAST::Grammar
+		RakuAST::Package,
+		RakuAST::Package::Attachable,
+		RakuAST::Grammar,
+		RakuAST::AttachTarget,
 	],
 	control => [
 		RakuAST::ForLoopImplementation,
@@ -442,77 +522,246 @@ my %groups is Map = (
 		RakuAST::Statement::IfWith,
 		RakuAST::Statement::Unless,
 		RakuAST::Statement::With,
-		RakuAST::Statement::When
+		RakuAST::Statement::When,
+		RakuAST::Statement::Given,
+		RakuAST::Statement::Whenever,
+		RakuAST::StatementModifier::Condition,
+		RakuAST::StatementModifier::For,
 	],
 	phaser => [
 		RakuAST::StatementPrefix::Phaser,
 		RakuAST::StatementPrefix::Phaser::Begin,
+		RakuAST::StatementPrefix::Phaser::Block,
+		RakuAST::StatementPrefix::Phaser::Check,
+		RakuAST::StatementPrefix::Phaser::Close,
 		RakuAST::StatementPrefix::Phaser::End,
+		RakuAST::StatementPrefix::Phaser::Enter,
+		RakuAST::StatementPrefix::Phaser::First,
+		RakuAST::StatementPrefix::Phaser::Init,
+		RakuAST::StatementPrefix::Phaser::Keep,
+		RakuAST::StatementPrefix::Phaser::Last,
+		RakuAST::StatementPrefix::Phaser::Leave,
+		RakuAST::StatementPrefix::Phaser::Next,
+		RakuAST::StatementPrefix::Phaser::Post,
+		RakuAST::StatementPrefix::Phaser::Pre,
+		RakuAST::StatementPrefix::Phaser::Quit,
+		RakuAST::StatementPrefix::Phaser::Sinky,
+		RakuAST::StatementPrefix::Phaser::Temp,
+		RakuAST::StatementPrefix::Phaser::Undo,
 		RakuAST::BeginTime,
 		RakuAST::CheckTime,
-		RakuAST::ParseTime
+		RakuAST::ParseTime,
 	],
 	regex => [
 		RakuAST::Regex,
 		RakuAST::RegexDeclaration,
+		RakuAST::RegexThunk,
 		RakuAST::QuotedRegex,
-		RakuAST::Regex::Atom,
-		RakuAST::Regex::Sequence,
 		RakuAST::QuotedMatchConstruct,
 		RakuAST::QuotedString,
+		RakuAST::Regex::Alternation,
 		RakuAST::Regex::Anchor,
-		RakuAST::Regex::Assertion
+		RakuAST::Regex::Anchor::BeginningOfLine,
+		RakuAST::Regex::Anchor::BeginningOfString,
+		RakuAST::Regex::Anchor::EndOfLine,
+		RakuAST::Regex::Anchor::EndOfString,
+		RakuAST::Regex::Anchor::LeftWordBoundary,
+		RakuAST::Regex::Anchor::RightWordBoundary,
+		RakuAST::Regex::Assertion,
+		RakuAST::Regex::Assertion::Alias,
+		RakuAST::Regex::Assertion::Callable,
+		RakuAST::Regex::Assertion::CharClass,
+		RakuAST::Regex::Assertion::Fail,
+		RakuAST::Regex::Assertion::InterpolatedBlock,
+		RakuAST::Regex::Assertion::InterpolatedVar,
+		RakuAST::Regex::Assertion::Lookahead,
+		RakuAST::Regex::Assertion::Named,
+		RakuAST::Regex::Assertion::Named::Args,
+		RakuAST::Regex::Assertion::Named::RegexArg,
+		RakuAST::Regex::Assertion::Pass,
+		RakuAST::Regex::Assertion::PredicateBlock,
+		RakuAST::Regex::Assertion::Recurse,
+		RakuAST::Regex::Atom,
+		RakuAST::Regex::BackReference,
+		RakuAST::Regex::BackReference::Named,
+		RakuAST::Regex::BackReference::Positional,
+		RakuAST::Regex::Backtrack,
+		RakuAST::Regex::Backtrack::Frugal,
+		RakuAST::Regex::Backtrack::Greedy,
+		RakuAST::Regex::Backtrack::Ratchet,
+		RakuAST::Regex::BacktrackModifiedAtom,
+		RakuAST::Regex::Block,
+		RakuAST::Regex::Branching,
+		RakuAST::Regex::CapturingGroup,
+		RakuAST::Regex::CharClass,
+		RakuAST::Regex::CharClass::Any,
+		RakuAST::Regex::CharClass::BackSpace,
+		RakuAST::Regex::CharClass::CarriageReturn,
+		RakuAST::Regex::CharClass::Digit,
+		RakuAST::Regex::CharClass::Escape,
+		RakuAST::Regex::CharClass::FormFeed,
+		RakuAST::Regex::CharClass::HorizontalSpace,
+		RakuAST::Regex::CharClass::Negatable,
+		RakuAST::Regex::CharClass::Newline,
+		RakuAST::Regex::CharClass::Nul,
+		RakuAST::Regex::CharClass::Space,
+		RakuAST::Regex::CharClass::Specified,
+		RakuAST::Regex::CharClass::Tab,
+		RakuAST::Regex::CharClass::VerticalSpace,
+		RakuAST::Regex::CharClass::Word,
+		RakuAST::Regex::CharClassElement,
+		RakuAST::Regex::CharClassElement::Enumeration,
+		RakuAST::Regex::CharClassElement::Property,
+		RakuAST::Regex::CharClassElement::Rule,
+		RakuAST::Regex::CharClassEnumerationElement,
+		RakuAST::Regex::CharClassEnumerationElement::Character,
+		RakuAST::Regex::CharClassEnumerationElement::Range,
+		RakuAST::Regex::Conjunction,
+		RakuAST::Regex::Group,
+		RakuAST::Regex::InternalModifier,
+		RakuAST::Regex::InternalModifier::IgnoreCase,
+		RakuAST::Regex::InternalModifier::IgnoreMark,
+		RakuAST::Regex::InternalModifier::Ratchet,
+		RakuAST::Regex::InternalModifier::Sigspace,
+		RakuAST::Regex::Interpolation,
+		RakuAST::Regex::Literal,
+		RakuAST::Regex::MatchFrom,
+		RakuAST::Regex::MatchTo,
+		RakuAST::Regex::NamedCapture,
+		RakuAST::Regex::Nested,
+		RakuAST::Regex::QuantifiedAtom,
+		RakuAST::Regex::Quantifier,
+		RakuAST::Regex::Quantifier::BlockRange,
+		RakuAST::Regex::Quantifier::OneOrMore,
+		RakuAST::Regex::Quantifier::Range,
+		RakuAST::Regex::Quantifier::ZeroOrMore,
+		RakuAST::Regex::Quantifier::ZeroOrOne,
+		RakuAST::Regex::Quote,
+		RakuAST::Regex::Sequence,
+		RakuAST::Regex::SequentialAlternation,
+		RakuAST::Regex::SequentialConjunction,
+		RakuAST::Regex::Statement,
+		RakuAST::Regex::Term,
+		RakuAST::Regex::WithWhitespace,
+		RakuAST::RuleDeclaration,
+		RakuAST::TokenDeclaration,
 	],
 	data => [
 		RakuAST::CaptureSource,
 		RakuAST::ArgList,
+		RakuAST::Name,
+		RakuAST::Label,
+		RakuAST::Lookup,
+		RakuAST::ColonPair,
+		RakuAST::ColonPair::False,
+		RakuAST::ColonPair::Number,
+		RakuAST::ColonPair::True,
+		RakuAST::ColonPair::Value,
+		RakuAST::ColonPair::Variable,
+		RakuAST::ColonPairs,
+		RakuAST::QuotePair,
+		RakuAST::QuoteWordsAtom,
+		RakuAST::SemiList,
+		RakuAST::Postcircumfix,
 		RakuAST::Postcircumfix::ArrayIndex,
 		RakuAST::Postcircumfix::HashIndex,
+		RakuAST::Postcircumfix::LiteralHashIndex,
+		RakuAST::Circumfix,
 		RakuAST::Circumfix::ArrayComposer,
-		RakuAST::Circumfix::HashComposer
+		RakuAST::Circumfix::HashComposer,
+		RakuAST::Circumfix::Parentheses,
+		RakuAST::OnlyStar,
 	],
 	code => [
+		RakuAST::CompUnit,
 		RakuAST::Code,
 		RakuAST::Routine,
 		RakuAST::Method,
+		RakuAST::Methodish,
 		RakuAST::Sub,
 		RakuAST::Submethod,
 		RakuAST::Contextualizable,
 		RakuAST::Contextualizer,
-		RakuAST::LexicalScope
+		RakuAST::Contextualizer::Hash,
+		RakuAST::Contextualizer::Item,
+		RakuAST::Contextualizer::List,
+		RakuAST::ImplicitBlockSemanticsProvider,
+		RakuAST::ImplicitDeclarations,
+		RakuAST::ImplicitLookups,
+		RakuAST::LexicalScope,
+		RakuAST::AttachTarget,
 	],
 	type => [
 		RakuAST::Type,
 		RakuAST::Type::Capture,
+		RakuAST::Type::Coercion,
+		RakuAST::Type::Definedness,
+		RakuAST::Type::Derived,
 		RakuAST::Type::Enum,
 		RakuAST::Type::Parameterized,
+		RakuAST::Type::Setting,
+		RakuAST::Type::Simple,
+		RakuAST::Type::Subset,
+		RakuAST::Native,
 		RakuAST::Trait,
 		RakuAST::Trait::Does,
-		RakuAST::Trait::Handles
+		RakuAST::Trait::Handles,
+		RakuAST::Trait::Hides,
+		RakuAST::Trait::Is,
+		RakuAST::Trait::Of,
+		RakuAST::Trait::Returns,
+		RakuAST::Trait::Type,
+		RakuAST::Trait::Will,
+		RakuAST::Trait::WillBuild,
 	],
 	meta => [
 		RakuAST::Meta,
 		RakuAST::MetaInfix,
 		RakuAST::CurryThunk,
 		RakuAST::FakeSignature,
-		RakuAST::PlaceholderParameterOwner
+		RakuAST::PlaceholderParameterOwner,
+		RakuAST::Knowhow,
+		RakuAST::Nqp,
+		RakuAST::Nqp::Const,
+		RakuAST::CompileTimeValue,
+		RakuAST::StubbyMeta,
 	],
 	doc => [
 		RakuAST::Doc,
 		RakuAST::Doc::Block,
+		RakuAST::Doc::Declarator,
+		RakuAST::Doc::LegacyRow,
 		RakuAST::Doc::Markup,
 		RakuAST::Doc::Paragraph,
-		RakuAST::Pragma
+		RakuAST::Doc::Row,
+		RakuAST::Pragma,
+		RakuAST::Substitution,
+		RakuAST::SubstitutionReplacementThunk,
 	],
 	special => [
 		RakuAST::Blorst,
 		RakuAST::Stub,
+		RakuAST::Stub::Die,
 		RakuAST::Stub::Fail,
 		RakuAST::Stub::Warn,
 		RakuAST::Term,
 		RakuAST::Termish,
+		RakuAST::Term::Capture,
+		RakuAST::Term::EmptySet,
+		RakuAST::Term::HyperWhatever,
+		RakuAST::Term::Name,
+		RakuAST::Term::Named,
+		RakuAST::Term::RadixNumber,
+		RakuAST::Term::Rand,
+		RakuAST::Term::Reduce,
+		RakuAST::Term::Self,
+		RakuAST::Term::TopicCall,
+		RakuAST::Term::Whatever,
 		RakuAST::OnlyStar,
-		RakuAST::ProducesNil
+		RakuAST::ProducesNil,
+		RakuAST::SinkBoundary,
+		RakuAST::SinkPropagator,
+		RakuAST::Sinkable,
 	],
 
 	call       => [RakuAST::Call],
@@ -539,6 +788,10 @@ my %groups is Map = (
 	],
 	iterable => [
 		RakuAST::Statement::Loop,
+		RakuAST::Statement::Loop::RepeatUntil,
+		RakuAST::Statement::Loop::RepeatWhile,
+		RakuAST::Statement::Loop::Until,
+		RakuAST::Statement::Loop::While,
 		RakuAST::Statement::For,
 		RakuAST::Statement::Whenever,
 	],
@@ -555,6 +808,23 @@ my %groups is Map = (
 	var => [
 		RakuAST::VarDeclaration,
 		RakuAST::Var,
+		RakuAST::Var::Attribute,
+		RakuAST::Var::Compiler,
+		RakuAST::Var::Doc,
+		RakuAST::Var::Dynamic,
+		RakuAST::Var::Lexical,
+		RakuAST::Var::NamedCapture,
+		RakuAST::Var::Package,
+		RakuAST::Var::PositionalCapture,
+		RakuAST::Var::Slang,
+		RakuAST::Var::Attribute::Public,
+		RakuAST::Var::Compiler::Block,
+		RakuAST::Var::Compiler::File,
+		RakuAST::Var::Compiler::Line,
+		RakuAST::Var::Compiler::Lookup,
+		RakuAST::Var::Compiler::Routine,
+		RakuAST::Var::Lexical::Constant,
+		RakuAST::Var::Lexical::Setting,
 	],
 	var-usage => [
 		RakuAST::Var,
@@ -566,32 +836,112 @@ my %groups is Map = (
 	method-declaration => [
 		RakuAST::Method
 	],
+	# --- ergonomic aliases and new groups ---
+	operator => [
+		RakuAST::Infixish,
+		RakuAST::Prefixish,
+		RakuAST::Postfixish,
+	],
+	apply-operator => [
+		RakuAST::ApplyInfix,
+		RakuAST::ApplyListInfix,
+		RakuAST::ApplyPostfix,
+		RakuAST::Ternary,
+	],
+	variable => [
+		RakuAST::Var,
+		RakuAST::VarDeclaration,
+		RakuAST::VarDeclaration::Simple,
+	],
+	variable-usage => [
+		RakuAST::Var,
+	],
+	variable-declaration => [
+		RakuAST::VarDeclaration::Simple,
+		RakuAST::VarDeclaration,
+	],
+	assignment => [
+		RakuAST::Assignment,
+		RakuAST::Initializer,
+		RakuAST::Initializer::Assign,
+		RakuAST::Initializer::Bind,
+		RakuAST::Initializer::CallAssign,
+		RakuAST::Initializer::Expression,
+	],
 );
 
 my %id is Map = (
-	"RakuAST::Call"                   => "name",
-	"RakuAST::Statement::Expression"  => "expression",
-	"RakuAST::Statement::IfWith"      => "condition",
-	"RakuAST::Statement::Unless"      => "condition",
-	"RakuAST::Literal"                => "value",
-	"RakuAST::Name"                   => "simple-identifier",
-	"RakuAST::Term::Name"             => "name",
-	"RakuAST::ApplyInfix"             => "infix",
-	"RakuAST::Infixish"               => "infix",
-	"RakuAST::Infix"                  => "operator",
-	"RakuAST::Prefix"                 => "operator",
-	"RakuAST::Postfix"                => "operator",
-	"RakuAST::ApplyInfix"             => "infix",
-	"RakuAST::ApplyListInfix"         => "infix",
-	"RakuAST::ApplyDottyInfix"        => "infix",
-	"RakuAST::ApplyPostfix"           => "postfix",
-	"RakuAST::FunctionInfix"          => "function",
-	"RakuAST::ArgList"                => "args",
-	"RakuAST::Var::Lexical"           => "desigilname",
-	"RakuAST::Statement::For"         => "source",
-	"RakuAST::Statement::Loop"        => "condition",
-	"RakuAST::VarDeclaration"         => "name",
-);
+		# Calls and expressions
+		"RakuAST::Call"                   => "name",
+		"RakuAST::Statement::Expression"  => "expression",
+
+		# Control statements
+		"RakuAST::Statement::IfWith"      => "condition",
+		"RakuAST::Statement::If"          => "condition",
+		"RakuAST::Statement::Unless"      => "condition",
+		"RakuAST::Statement::With"        => "condition",
+		"RakuAST::Statement::Without"     => "condition",
+		"RakuAST::Statement::When"        => "condition",
+		"RakuAST::Statement::For"         => "source",
+		"RakuAST::Statement::Loop"        => "condition",
+
+		# Literals and names
+		"RakuAST::Literal"                => "value",
+		"RakuAST::Name"                   => "simple-identifier",
+		"RakuAST::Term::Name"             => "name",
+
+		# Operators and applications
+		"RakuAST::Infix"                  => "operator",
+		"RakuAST::Prefix"                 => "operator",
+		"RakuAST::Postfix"                => "operator",
+		"RakuAST::Infixish"               => "infix",
+		"RakuAST::ApplyInfix"             => "infix",
+		"RakuAST::ApplyListInfix"         => "infix",
+		"RakuAST::ApplyDottyInfix"        => "infix",
+		"RakuAST::ApplyPostfix"           => "postfix",
+		"RakuAST::ApplyPrefix"            => "prefix",
+		"RakuAST::FunctionInfix"          => "function",
+
+		# Arguments
+		"RakuAST::ArgList"                => "args",
+
+		# Variables and declarations
+		"RakuAST::Var::Lexical"           => "desigilname",
+		"RakuAST::Var::Attribute"         => "name",
+		"RakuAST::Var::Package"           => "name",
+		"RakuAST::Var::Doc"               => "name",
+		"RakuAST::Var::Dynamic"           => "name",
+		"RakuAST::VarDeclaration"         => "name",
+		"RakuAST::VarDeclaration::Simple" => "name",
+
+		# Assignment
+		"RakuAST::Assignment"             => "operator",
+
+		# Declarations / routines / packages
+		"RakuAST::Class"                  => "name",
+		"RakuAST::Role"                   => "name",
+		"RakuAST::Module"                 => "name",
+		"RakuAST::Package"                => "name",
+		"RakuAST::Grammar"                => "name",
+		"RakuAST::Method"                 => "name",
+		"RakuAST::Sub"                    => "name",
+		"RakuAST::Submethod"              => "name",
+		"RakuAST::Routine"                => "name",
+
+		# Regex-related
+		"RakuAST::RegexDeclaration"       => "name",
+		"RakuAST::RuleDeclaration"        => "name",
+		"RakuAST::TokenDeclaration"       => "name",
+		"RakuAST::Regex::NamedCapture"    => "name",
+
+		# Pairs
+		"RakuAST::ColonPair"              => "key",
+		"RakuAST::FatArrow"               => "key",
+
+		# Misc
+		"RakuAST::Label"                  => "name",
+	);
+
 
 method get-id-field($node) {
 	for $node.^mro {
@@ -650,7 +1000,7 @@ multi method gist(::?CLASS:D: :$inside = False) {
 	}{
 		"[" ~ %!atts.kv.map(-> $k, $v { $k ~ ( $v =:= Whatever ?? "" !! "=$v.gist()" ) }).join(', ') ~ ']' if %!atts
 	}{
-		("\{{$_}}" for @!code).join: ""
+		(quietly "\{{$_}}" for @!code).join: ""
 	}{
 		'$' ~ .Str with $!name
 	}{
@@ -701,19 +1051,20 @@ sub prepare-node($node) {
 }
 
 my @current-caller;
-sub prepare-caller(Bool() :$result) {
+sub prepare-caller(Mu :$result) {
 	"{
 		!$result.defined
 			?? "\o33[1m"
 			!! $result
 				?? "\o33[32;1m"
 				!! "\o33[31;1m"
+		}
 	}{
 		do if callframe(4).code.name -> $name {
 			@current-caller.push: $name;
 			"{$name}({callframe(6).code.signature.params.grep(!*.named).skip>>.gist.join: ", "})"
 		} else {
-			@current-caller.pop
+			@current-caller.pop if @current-caller
 		}
 	}\o33[m"
 }
@@ -755,17 +1106,14 @@ multi prepare-code($node) {
 }
 
 sub print-validator-begin($node, $value) {
-	return unless $DEBUG;
+	return unless %*ENV<ASTQUERY_DEBUG>;
 	note $indent.&prepare-indent, $node.&prepare-code, " (", $node.&prepare-node, ") - ", prepare-caller, ": ", $value;
 	$indent++;
 }
 
-multi print-validator-end($, Mu, Mu $result) {
-	True
-}
-
-multi print-validator-end($node, $value, $result) {
-	return True unless $DEBUG;
+sub print-validator-end(|c) {
+	return True unless %*ENV<ASTQUERY_DEBUG>;
+	my ($node, $value, $result) = c.list;
 	note $indent.&prepare-indent(:end), prepare-caller(:result($result)), " ({ $result.&prepare-bool })";
 	$indent--;
 	True
@@ -798,7 +1146,7 @@ method ACCEPTS($node) {
 		}
 		return False unless $ans;
 		#$match.hash.push: $!name => $node if $!name;
-		#say $node.^name, " - ", $match.list if $DEBUG;
+		#say $node.^name, " - ", $match.list if $*DEBUG;
 	}
 	$match
 }
@@ -913,15 +1261,23 @@ multi method validate-class($node, @classes) {
 	}).first(*.so) // False
 }
 
-multi method validate-ids($node, @ids) {
-	print-validator-begin $node, @ids;
-	POST print-validator-end $node, @ids, $_;
-	my $key = self.get-id-field: $node;
-	return False unless $key;
-	@ids.unique.map(-> $id {
-		self.validate-atts: $node, %($key => $id)
-	}).first(*.so) // False
-}
+	multi method validate-ids($node, @ids) {
+		print-validator-begin $node, @ids;
+		POST print-validator-end $node, @ids, $_;
+		my $key = self.get-id-field: $node;
+		return False unless $key;
+		@ids.unique.map(-> $id {
+			my $value = $id;
+			if $key eq 'name'
+			&& $node.^name.starts-with('RakuAST::VarDeclaration')
+			&& $id ~~ Str
+			&& $id !~~ /^<[\$@%&]>/ {
+				$value = -> $n { $n.^can('name') && $n.name ~~ Str && $n.name.subst(/^<[\$@%&]>/, '') eq $id };
+			}
+			self.validate-atts: $node, %($key => $value)
+		}).first(*.so) // False
+	}
+
 
 multi method validate-ids($node, $id) {
 	print-validator-begin $node, $id;
@@ -930,8 +1286,8 @@ multi method validate-ids($node, $id) {
 }
 
 method validate-atts($node, %atts) {
-	print-validator-begin $node, %atts;
-	POST print-validator-end $node, %atts, $_;
+	print-validator-begin $node, %atts unless $node ~~ RakuAST::Name;
+	POST print-validator-end $node, $_ unless $node ~~ RakuAST::Name;
 	return ASTQuery::Match.new: :list[$node,]
 		if ASTQuery::Match.merge-and: |%atts.kv.map: -> $key, $value is copy {
 			$value = $value.($node) if $value ~~ Callable;
@@ -956,11 +1312,13 @@ multi method validate-value($node, $key, $ where * =:= True) {
 multi method validate-value($node, $key, $value) {
 	print-validator-begin $node, $value;
 	POST print-validator-end $node, $value, $_;
-	do if $node.^name.starts-with("RakuAST") && $value !~~ ::?CLASS {
+	do if $node.^name.starts-with("RakuAST") {
 		return False unless $key;
 		return False unless $node.^can: $key; # it can be a problem if $key is 'none', for example
 		my Any $nnode = $node."$key"();
-		self.validate-value($nnode, $.get-id-field($nnode), $value)
+		$value ~~ Mu:U
+			?? ($nnode ~~ $value ?? ASTQuery::Match.new(:list[$node,]) !! False)
+			!! self.validate-value($nnode, $.get-id-field($nnode), $value)
 	} else { 
 		$value.ACCEPTS($node) && ASTQuery::Match.new(:list[$node,])
 	} || False

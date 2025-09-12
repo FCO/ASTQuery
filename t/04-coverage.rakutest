@@ -4,9 +4,6 @@ use ASTQuery;
 use ASTQuery::Matcher;
 use ASTQuery::Match;
 
-# Enable debug paths to exercise validator logging branches
-%*ENV<ASTQUERY_DEBUG> = 1;
-
 class HL does ASTQuery::HighLighter {}
 
 # --- ASTQuery::Match: merge-or / merge-and ---
