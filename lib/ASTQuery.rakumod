@@ -66,13 +66,9 @@ ASTQuery - Query and manipulate Raku’s Abstract Syntax Trees (RakuAST) with an
 
 =head1 INSTALLATION
 
-=begin itemized
-
 =item Install dependencies (without running tests): C<zef install --/test --test-depends --deps-only .>
 
 =item Optional tools: C<zef install --/test App::Prove6>, C<zef install --/test App::RaCoCo>
-
-=end itemized
 
 =head1 QUICKSTART
 
@@ -104,8 +100,6 @@ attributes, capture interesting nodes, and register custom function matchers for
 
 =head2 Key Features
 
-=begin itemized
-
 =item Expressive Query Syntax: Define complex queries to match specific AST nodes.
 =item Relationship Operators: Parent/child, ancestor/descendant, and ignorable-skipping variants.
 =item Named Captures: Capture matched nodes for easy retrieval.
@@ -113,11 +107,7 @@ attributes, capture interesting nodes, and register custom function matchers for
 =item Custom Functions: Register reusable matchers referenced with C<&name> in queries.
 =item CLI Utility: Query files on disk and print results in a readable form.
 
-=end itemized
-
 =head1 CLI
-
-=begin itemized
 
 =item Run against a directory or a single file: C<raku -I. bin/ast-query.raku 'SELECTOR' [path]>
 
@@ -126,8 +116,6 @@ attributes, capture interesting nodes, and register custom function matchers for
 =item Scans extensions: C<raku>, C<rakumod>, C<rakutest>, C<rakuconfig>, C<p6>, C<pl6>, C<pm6>.
 
 =item Example: C<raku -I. bin/ast-query.raku '.call#say >>> .int' lib/>
-
-=end itemized
 
 =head1 QUERY LANGUAGE SYNTAX
 
@@ -139,8 +127,6 @@ C<RakuAST::Class::Name.group#id[attr1, attr2=attrvalue]$name&function>
 
 Components:
 
-=begin itemized
-
 =item C<RakuAST::Class::Name>: (Optional) Full class name.
 =item C<.group>: (Optional) Node group (predefined; see Groups).
 =item C<#id>: (Optional) Identifier value compared against the node’s id field.
@@ -148,11 +134,7 @@ Components:
 =item C<$name>: (Optional) Capture name (only one per node part).
 =item C<&function>: (Optional) Apply a registered function matcher; multiple compose with AND.
 
-=end itemized
-
 =head2 Operators
-
-=begin itemized
 
 =item C<E<gt>>  : Left node has the right node as a child.
 =item C<E<gt>E<gt>> : Left node has the right node as a descendant, with only ignorable nodes between.
@@ -161,35 +143,25 @@ Components:
 =item C<E<lt>E<lt>> : Right node is an ancestor of the left node, with only ignorable nodes between.
 =item C<E<lt>E<lt>E<lt>>: Right node is an ancestor of the left node (any nodes in between).
 
-=end itemized
-
 Note: The space operator is no longer used.
 
 =head2 Attribute Relation Operators
 
 Start traversal from the attribute node (when the attribute value is itself a RakuAST node):
 
-=begin itemized
-
 =item C<[attr=E<gt> MATCH]>     — Child relation from the attribute node to MATCH.
 =item C<[attr=E<gt>E<gt> MATCH]>    — Descendant via ignorable nodes.
 =item C<[attr=E<gt>E<gt>E<gt> MATCH]>   — Descendant allowing any nodes.
-
-=end itemized
 
 =head2 Attribute Value Operators
 
 Inside C<[attributes]> you can apply value operators to an attribute, comparing against a literal string/number,
 identifier, or a regex literal:
 
-=begin itemized
-
 =item C<[attr~= value]> — Contains: substring or regex match on the attribute’s leaf value
 =item C<[attr^= value]> — Starts-with
 =item C<[attr$= value]> — Ends-with
 =item C<[attr*=/regex/]> — Regex match using C</.../> literal
-
-=end itemized
 
 When the attribute value is a RakuAST node, the matcher walks nested nodes via their configured id fields to
 reach a comparable leaf value (e.g., C<.call[name]> → Name’s identifier). Non-existent attributes never match.
@@ -199,22 +171,16 @@ Flags in regex literals are not yet supported.
 
 Nodes skipped by C<E<gt>E<gt>> and C<E<lt>E<lt>> operators:
 
-=begin itemized
-
 =item C<RakuAST::Block>
 =item C<RakuAST::Blockoid>
 =item C<RakuAST::StatementList>
 =item C<RakuAST::Statement::Expression>
 =item C<RakuAST::ArgList>
 
-=end itemized
-
 =head1 Function Matchers (C<&name>)
 
 Register reusable matchers in code and reference them in queries via C<&name>.
 Functions compose with other constraints using AND semantics.
-
-=begin itemized
 
 =item From a selector string: C<new-function('&has-int' => 'RakuAST::Node >>> .int')>
 
@@ -222,21 +188,13 @@ Functions compose with other constraints using AND semantics.
 
 =item From a Callable: C<new-function('&int-is-2' => -> $n { $n.^name eq 'RakuAST::IntLiteral' && $n.value == 2 })>
 
-=end itemized
-
 Built-ins registered on module load:
-
-=begin itemized
 
 =item C<&is-call>, C<&is-operator>, C<&is-apply-operator>
 =item C<&is-assignment>, C<&is-conditional>
 =item C<&has-var>, C<&has-call>, C<&has-int>
 
-=end itemized
-
 =head1 Groups (Common Aliases)
-
-=begin itemized
 
 =item C<.call> → C<RakuAST::Call>
 =item C<.apply-operator> → C<RakuAST::ApplyInfix|ApplyListInfix|ApplyPostfix|Ternary>
@@ -245,21 +203,15 @@ Built-ins registered on module load:
 =item C<.variable>, C<.variable-usage>, C<.variable-declaration>
 =item C<.statement>, C<.expression>, C<.int>, C<.str>, C<.ignorable>
 
-=end itemized
-
 You can extend these with C<add-ast-group> and C<add-to-ast-group>.
 
 =head1 AST TRANSFORMATIONS
 
 Use ASTQuery in a C<CHECK> phaser to rewrite the current compilation unit’s AST before runtime.
 
-=begin itemized
-
 =item Prereqs: C<use experimental :rakuast;>
 
 =item Obtain the tree with C<$*CU.AST>, mutate nodes, optionally assign back with C<$*CU.AST = $ast>.
-
-=end itemized
 
 =head2 Example: Replace C<say> with C<note>
 
@@ -494,12 +446,8 @@ Explanation:
 
 The C<ast-query> function returns an C<ASTQuery::Match> object with:
 
-=begin itemized
-
 =item C<@.list>: Matched nodes.
 =item C<%.hash>: Captured nodes.
-
-=end itemized
 
 Accessing captured nodes:
 
@@ -516,8 +464,6 @@ my @matched_nodes = $result.list;
 
 =head1 PROGRAMMATIC API
 
-=begin itemized
-
 =item C<ast-query($ast, Str $selector)> and C<ast-query($ast, $matcher)> — run a query over a RakuAST and return C<ASTQuery::Match>.
 
 =item C<ast-matcher(Str $selector)> — compile a selector into a matcher object for reuse.
@@ -528,21 +474,15 @@ my @matched_nodes = $result.list;
 
 =item C<set-ast-id($class, $id-method)> — configure which attribute is considered the node’s id field.
 
-=end itemized
-
 =head1 GET INVOLVED
 
 Visit the L<ASTQuery repository|https://github.com/FCO/ASTQuery> on GitHub for examples, updates, and contributions.
 
 =head2 How You Can Help
 
-=begin itemized
-
 =item Feedback: Share your thoughts on features and usability.
 =item Code Contributions: Add new features or fix bugs.
 =item Documentation: Improve tutorials and guides.
-
-=end itemized
 
 Note: ASTQuery is developed by Fernando Corrêa de Oliveira.
 
