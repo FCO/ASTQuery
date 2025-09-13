@@ -184,6 +184,8 @@ Groups (Common Aliases)
 
 You can extend these with `add-ast-group` and `add-to-ast-group`.
 
+See the full reference in [REFERENCE.md](./REFERENCE.md).
+
 AST TRANSFORMATIONS
 ===================
 

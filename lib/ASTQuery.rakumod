@@ -205,6 +205,8 @@ Built-ins registered on module load:
 
 You can extend these with C<add-ast-group> and C<add-to-ast-group>.
 
+See the full reference in L<REFERENCE.md|REFERENCE.md> for a complete list of groups, built-in functions, and id fields.
+
 =head1 AST TRANSFORMATIONS
 
 Use ASTQuery in a C<CHECK> phaser to rewrite the current compilation unit’s AST before runtime.
