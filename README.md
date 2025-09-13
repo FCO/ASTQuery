@@ -64,7 +64,7 @@ CLI
 
   * Scans extensions: `raku`, `rakumod`, `rakutest`, `rakuconfig`, `p6`, `pl6`, `pm6`.
 
-  * Example: `raku -I. bin/ast-query.raku '.call#say >>>.int' lib/`
+  * Example: `raku -I. bin/ast-query.raku '.call#say >>> .int' lib/`
 
 QUERY LANGUAGE SYNTAX
 =====================
