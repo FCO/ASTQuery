@@ -8,18 +8,8 @@ ASTQuery - Query and manipulate Raku’s Abstract Syntax Trees (RakuAST) with an
 INSTALLATION
 ============
 
-over
-====
-
-4
-
-  * Install dependencies (without running tests): `zef install --/test --test-depends --deps-only .`
-
-  * Optional tools: `zef install --/test App::Prove6`, `zef install --/test App::RaCoCo`
-
-back
-====
-
+- Install dependencies (without running tests): `zef install --/test --test-depends --deps-only .`
+- Optional tools: `zef install --/test App::Prove6`, `zef install --/test App::RaCoCo`
 
 
 QUICKSTART
@@ -68,22 +58,10 @@ Key Features
 CLI
 ===
 
-over
-====
-
-4
-
-  * Run against a directory or a single file: `raku -I. bin/ast-query.raku 'SELECTOR' [path]`
-
-  * If `path` is omitted, scans the current directory recursively.
-
-  * Scans extensions: `raku`, `rakumod`, `rakutest`, `rakuconfig`, `p6`, `pl6`, `pm6`.
-
-  * Example: `raku -I. bin/ast-query.raku '.call#say `>> .int' lib/>
-
-back
-====
-
+- Run against a directory or a single file: `raku -I. bin/ast-query.raku 'SELECTOR' [path]`
+- If `path` is omitted, scans the current directory recursively.
+- Scans extensions: `raku`, `rakumod`, `rakutest`, `rakuconfig`, `p6`, `pl6`, `pm6`.
+- Example: `raku -I. bin/ast-query.raku '.call#say >>> .int' lib/`
 
 
 QUERY LANGUAGE SYNTAX
@@ -173,20 +151,9 @@ Function Matchers (`&name`)
 
 Register reusable matchers in code and reference them in queries via `&name`. Functions compose with other constraints using AND semantics.
 
-over
-====
-
-4
-
-  * From a selector string: `new-function('&has-int' =` 'RakuAST::Node >>> .int')>
-
-  * From a compiled matcher: `new-function '&f-call', ast-matcher('.call#f')`
-
-  * From a Callable: `new-function('&int-is-2' =` -> $n { $n.^name eq 'RakuAST::IntLiteral' && $n.value == 2 })>
-
-back
-====
-
+- From a selector string: `new-function '&has-int', 'RakuAST::Node >>> .int'`
+- From a compiled matcher: `new-function '&f-call', ast-matcher('.call#f')`
+- From a Callable: `new-function '&int-is-2', -> $n { $n.^name eq 'RakuAST::IntLiteral' && $n.value == 2 }`
 
 
 Built-ins registered on module load:
@@ -219,18 +186,8 @@ AST TRANSFORMATIONS
 
 Use ASTQuery in a `CHECK` phaser to rewrite the current compilation unit’s AST before runtime.
 
-over
-====
-
-4
-
-  * Prereqs: `use experimental :rakuast;`
-
-  * Obtain the tree with `$*CU.AST`, mutate nodes, optionally assign back with `$*CU.AST = $ast`.
-
-back
-====
-
+- Prereqs: `use experimental :rakuast;`
+- Obtain the tree with `$*CU.AST`, mutate nodes, optionally assign back with `$*CU.AST = $ast`.
 
 
 Example: Replace `say` with `note`
