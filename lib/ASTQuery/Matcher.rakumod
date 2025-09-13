@@ -845,6 +845,12 @@ method !normalize-fname(Str $name) { $name.subst(/^'&'/, '', :g(False)) }
 
 method !get-function(Str $name) { %functions{ self!normalize-fname($name) } }
 
+# Public introspection helpers for selector validation
+multi method function-exists(Str $name --> Bool) { so self!get-function($name) }
+multi method known-functions() { %functions.keys.sort }
+multi method group-exists(Str $name --> Bool) { so %groups{$name} }
+multi method known-groups() { %groups.keys.sort }
+
 has ASTClass() @.classes;
 has ASTGroup() @.groups;
 has @.ids;

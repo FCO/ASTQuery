@@ -52,6 +52,25 @@ method node($/) {
 	%map<atts> := %(|.map: { |.Map }) with %map<atts>;
 	%map<name> = .head with %map<name>;
 	%map<code> := @=.flat with %map<code>;
+
+	# Validate unknown &functions early with a helpful message
+	if %map<functions> -> @funcs {
+		my @unknown = @funcs.grep({ !ASTQuery::Matcher.function-exists($_) }).unique;
+		if @unknown {
+			my @known = ASTQuery::Matcher.known-functions();
+			die "Unknown function { @unknown.map({ '&' ~ $_ }).join(', ') }. Known functions: { @known.map({ '&' ~ $_ }).join(', ') }";
+		}
+	}
+
+	# Validate unknown .groups early with a helpful message
+	if %map<groups> -> @groups {
+		my @unknown = @groups.grep({ !ASTQuery::Matcher.group-exists($_) }).unique;
+		if @unknown {
+			my @known = ASTQuery::Matcher.known-groups();
+			die "Unknown group { @unknown.map({ '.' ~ $_ }).join(', ') }. Known groups: { @known.map({ '.' ~ $_ }).join(', ') }";
+		}
+	}
+
 	#dd %map;
 	make my $a = ASTQuery::Matcher.new: |%map.Map;
 	#dd $a;

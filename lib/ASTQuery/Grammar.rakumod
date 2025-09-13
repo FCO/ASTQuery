@@ -3,7 +3,7 @@ unit grammar ASTQuery::Grammar;
 
 token TOP { <str-or-list> }
 
-token word { <-[\s#.\[\]=$>,~+]>+ }
+token word { <-[\s#.\[\]=$>,~+&]>+ }
 token ns { <[\w:-]>+ }
 token akey { <-[\s#.\[\]=>,~+^$*]>+ }
 

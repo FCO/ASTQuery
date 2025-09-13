@@ -1,0 +1,50 @@
+use experimental :rakuast;
+use Test;
+use ASTQuery;
+use ASTQuery::Matcher;
+
+# Extra edges to nudge coverage on seldom-hit paths
+
+# 1) Unknown &function should die during parse with message
+{
+    my $ast = q{ say 42 }.AST;
+    dies-ok { $ast.&ast-query('&this-function-does-not-exist') }, 'unknown &function dies with helpful message';
+}
+
+# 1b) Unknown .group should die during parse with message
+{
+    my $ast = q{ say 42 }.AST;
+    dies-ok { $ast.&ast-query('.this-group-does-not-exist') }, 'unknown .group dies with helpful message';
+}
+
+# 2) Attribute value as a Type object (Mu:U) on a nested node
+#    Validate that providing a Type matches the attribute's node type
+{
+    my \call = RakuAST::Call::Name.new(
+        name => RakuAST::Name.from-identifier('say'),
+        args => RakuAST::ArgList.new,
+    );
+    ok ASTQuery::Matcher.validate-atts(call, %(name => Str)),
+        'validate-atts accepts Type object on nested leaf (name => Str)';
+}
+
+# 3) Non-existent attribute exist-check via selector: never matches
+{
+    my $ast = q{ say 42 }.AST;
+    ok !$ast.&ast-query('.call[nope]').Bool, '.call[nope] never matches for missing attribute';
+}
+
+# 4) validate-value on non-RakuAST node delegates to ACCEPTS (Regex)
+{
+    my $got = ASTQuery::Matcher.validate-value: 'hello', 'whatever', /ell/;
+    isa-ok $got, ASTQuery::Match, 'non-RakuAST node + Regex ACCEPTS returns Match';
+    is-deeply $got.list, ['hello'], 'Match contains the original node';
+}
+
+# 5) Duplicate &functions deduped by .unique in validate-functions
+{
+    my $ast = q{ say 1 + 2 }.AST;
+    ok $ast.&ast-query('&has-int&has-int').Bool, 'duplicate &functions still match due to unique';
+}
+
+done-testing;

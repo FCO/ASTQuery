@@ -2,6 +2,11 @@ Revision history for ASTQuery
 
 {{$NEXT}}
 
+    - feat(parser): die on unknown &functions and .groups during selector parse; list known items in error messages
+      * Actions: validate names in selector node and fail early
+      * Matcher: add introspection helpers `function-exists`, `known-functions`, `group-exists`, `known-groups`
+      * Tests: update unknown &function to dies-ok; add unknown .group dies-ok
+
     - feat: attribute value operators in matchers: `~=`, `^=`, `$=`, `*=`
       * Grammar: add `akey` for attr keys/identifiers; add `/.../` regex literal
       * Actions: build `AttrOp` nodes; construct regex from literal
