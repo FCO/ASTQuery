@@ -88,7 +88,7 @@ my $ops = $ast.&ast-query('.apply-operator[left=1, right=3]');
 say $ops.list;
 
 # Find calls that have an Int somewhere under args
-my $calls = $ast.&ast-query('&is-call[args=>>> .int]');
+my $calls = $ast.&ast-query('&is-call[args=>>>.int]');
 say $calls.list;
 =end code
 
@@ -115,7 +115,7 @@ attributes, capture interesting nodes, and register custom function matchers for
 
 =item Scans extensions: C<raku>, C<rakumod>, C<rakutest>, C<rakuconfig>, C<p6>, C<pl6>, C<pm6>.
 
-=item Example: C<raku -I. bin/ast-query.raku '.call#say >>> .int' lib/>
+=item Example: `raku -I. bin/ast-query.raku '.call#say >>> .int' lib/`
 
 =head1 QUERY LANGUAGE SYNTAX
 
@@ -136,12 +136,12 @@ Components:
 
 =head2 Operators
 
-=item C<E<gt>>  : Left node has the right node as a child.
-=item C<E<gt>E<gt>> : Left node has the right node as a descendant, with only ignorable nodes between.
-=item C<E<gt>E<gt>E<gt>>: Left node has the right node as a descendant (any nodes in between).
-=item C<E<lt>>  : Right node is the parent of the left node.
-=item C<E<lt>E<lt>> : Right node is an ancestor of the left node, with only ignorable nodes between.
-=item C<E<lt>E<lt>E<lt>>: Right node is an ancestor of the left node (any nodes in between).
+=item `>`  : Left node has the right node as a child.
+=item `>>` : Left node has the right node as a descendant, with only ignorable nodes between.
+=item `>>>`: Left node has the right node as a descendant (any nodes in between).
+=item `<`  : Right node is the parent of the left node.
+=item `<<` : Right node is an ancestor of the left node, with only ignorable nodes between.
+=item `<<<`: Right node is an ancestor of the left node (any nodes in between).
 
 Note: The space operator is no longer used.
 
@@ -149,9 +149,9 @@ Note: The space operator is no longer used.
 
 Start traversal from the attribute node (when the attribute value is itself a RakuAST node):
 
-=item C<[attr=E<gt> MATCH]>     — Child relation from the attribute node to MATCH.
-=item C<[attr=E<gt>E<gt> MATCH]>    — Descendant via ignorable nodes.
-=item C<[attr=E<gt>E<gt>E<gt> MATCH]>   — Descendant allowing any nodes.
+=item `[attr=>MATCH]`     — Child relation from the attribute node to MATCH.
+=item `[attr=>>MATCH]`    — Descendant via ignorable nodes.
+=item `[attr=>>>MATCH]`   — Descendant allowing any nodes.
 
 =head2 Attribute Value Operators
 
@@ -169,7 +169,7 @@ Flags in regex literals are not yet supported.
 
 =head2 Ignorable Nodes
 
-Nodes skipped by C<E<gt>E<gt>> and C<E<lt>E<lt>> operators:
+Nodes skipped by `>>` and `<<` operators:
 
 =item C<RakuAST::Block>
 =item C<RakuAST::Blockoid>
@@ -182,11 +182,11 @@ Nodes skipped by C<E<gt>E<gt>> and C<E<lt>E<lt>> operators:
 Register reusable matchers in code and reference them in queries via C<&name>.
 Functions compose with other constraints using AND semantics.
 
-=item From a selector string: C<new-function('&has-int' => 'RakuAST::Node >>> .int')>
+=item From a selector string: `new-function('&has-int' => 'RakuAST::Node >>>.int')`
 
-=item From a compiled matcher: C<new-function '&f-call', ast-matcher('.call#f')>
+=item From a compiled matcher: `new-function '&f-call', ast-matcher('.call#f')`
 
-=item From a Callable: C<new-function('&int-is-2' => -> $n { $n.^name eq 'RakuAST::IntLiteral' && $n.value == 2 })>
+=item From a Callable: `new-function('&int-is-2' => -> $n { $n.^name eq 'RakuAST::IntLiteral' && $n.value == 2 })`
 
 Built-ins registered on module load:
 
@@ -290,7 +290,7 @@ Explanation:
 
 =item The query C<.apply-operator[left=1, right=3]> matches Apply* nodes with left operand 1 and right operand 3.
 
-=head2 Example 2: Using the Ancestor Operator C<E<lt>E<lt>E<lt>> and Named Captures
+=head2 Example 2: Using the Ancestor Operator `<<<` and Named Captures
 
 =begin code :lang<raku>
 
@@ -344,7 +344,7 @@ Explanation:
 
 =item The query C«RakuAST::Infix <<< .conditional$cond .int#2$int» matches Infix nodes that have an ancestor matching C<.conditional$cond>, regardless of intermediate nodes, and captures C<IntLiteral> nodes with value 2 as C<$int>.
 
-=head2 Example 3: Using the Ancestor Operator C<E<lt>E<lt>> with Ignorable Nodes
+=head2 Example 3: Using the Ancestor Operator `<<` with Ignorable Nodes
 
 =begin code :lang<raku>
 
@@ -359,7 +359,7 @@ Explanation:
 
 =item The query C«RakuAST::Infix << .conditional$cond» matches Infix nodes that have an ancestor C<.conditional$cond>, with only ignorable nodes between them.
 
-=head2 Example 4: Using the Parent Operator C<E<lt>> and Capturing Nodes
+=head2 Example 4: Using the Parent Operator `<` and Capturing Nodes
 
 =begin code :lang<raku>
 
@@ -399,7 +399,7 @@ Explanation:
 
 =item The query C<< RakuAST::Infix < .apply-operator[right=2]$op >> matches Apply* nodes with right operand 2 whose parent is an C<Infix> node and captures them as C<$op>.
 
-=head2 Example 5: Using the Descendant Operator C<E<gt>E<gt>E<gt>> and Capturing Variables
+=head2 Example 5: Using the Descendant Operator `<<<` and Capturing Variables
 
 =begin code :lang<raku>
 
@@ -440,7 +440,7 @@ say $result.hash;  # 'Var' node captured as 'var'
 
 Explanation:
 
-=item The query C<< .call >>> RakuAST::Var$var >> matches call nodes that have a descendant C<Var> node, regardless of intermediate nodes, and captures the C<Var> node as C<$var>.
+=item The query `.call >>> RakuAST::Var$var` matches call nodes that have a descendant C<Var> node, regardless of intermediate nodes, and captures the C<Var> node as C<$var>.
 
 =head1 RETRIEVING MATCHED NODES
 
