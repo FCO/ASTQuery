@@ -217,6 +217,54 @@ Built-ins registered on module load:
 
 You can extend these with C<add-ast-group> and C<add-to-ast-group>.
 
+=head1 AST TRANSFORMATIONS
+
+Use ASTQuery in a C<CHECK> phaser to rewrite the current compilation unit’s AST before runtime.
+
+=over 4
+
+=item Prereqs: C<use experimental :rakuast;>
+
+=item Obtain the tree with C<$*CU.AST>, mutate nodes, optionally assign back with C<$*CU.AST = $ast>.
+
+=back
+
+=head2 Example: Replace C<say> with C<note>
+
+=begin code :lang<raku>
+use experimental :rakuast;
+use ASTQuery;
+
+CHECK {
+    my $ast = $*CU.AST;
+    my $m = $ast.&ast-query('.call#say$call');
+    for $m<call> -> $call {
+        CATCH { default { note "say->note rewrite failed: $_" } }
+        try $call.name = RakuAST::Name.from-identifier('note');
+    }
+    $*CU.AST = $ast;
+}
+=end code
+
+=head2 Example: Change operator C<*> to C<+>
+
+=begin code :lang<raku>
+use experimental :rakuast;
+use ASTQuery;
+
+CHECK {
+    my $ast = $*CU.AST;
+    my $ops = $ast.&ast-query('.apply-operator[infix => RakuAST::Infix#*]$app');
+    for $ops<app> -> $app {
+        CATCH { default { note "operator rewrite failed: $_" } }
+        try $app.infix = RakuAST::Infix.new('+');
+    }
+    $*CU.AST = $ast;
+}
+=end code
+
+=note RakuAST remains experimental; if a field is not C<rw> on your Rakudo, rebuild the enclosing node as a fallback.
+
 =head1 EXAMPLES
 
 =head2 Example 1: Matching Specific Infix Operations

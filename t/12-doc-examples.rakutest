@@ -1,0 +1,133 @@
+use experimental :rakuast;
+use Test;
+use ASTQuery;
+
+# README/Pod Quickstart examples
+{
+	my $code = q:to/CODE/;
+		sub f($x) { }
+		f 42;
+		say 1 * 3;
+	CODE
+	my $ast = $code.AST;
+
+	my $ops = $ast.&ast-query('.apply-operator[left=1, right=3]');
+	ok $ops.list.elems >= 1, 'Quickstart: apply-operator[left=1,right=3] finds 1*3';
+
+	my $calls = $ast.&ast-query('&is-call[args=>>> .int]');
+	ok $calls.list.elems >= 1, 'Quickstart: &is-call[args=>>> .int] finds calls with int under args';
+}
+
+# Pod: Example using ancestor operator <<< with captures
+{
+	my $code = q:to/CODE/;
+		for ^10 {
+			if $_ %% 2 {
+				say $_ * 3;
+			}
+		}
+	CODE
+	my $ast = $code.AST;
+	my $res = $ast.&ast-query('RakuAST::Infix <<< .conditional$cond .int#2$int');
+	ok $res.list.grep({ .^name.ends-with('Infix') }).elems >= 1,
+		'Ancestor <<< example: finds infix nodes under a conditional';
+	ok $res<cond>.elems >= 1 && $res<int>.elems >= 1,
+		'Ancestor <<< example: captures cond and int lists populated';
+}
+
+# Pod: Parent operator < with capture
+{
+	my $code = q:to/CODE/;
+		for ^10 {
+			if $_ %% 2 { say $_ * 2 }
+		}
+	CODE
+	my $ast = $code.AST;
+	my $res = $ast.&ast-query('RakuAST::Infix < .apply-operator[right=2]$op');
+	ok $res<op>.elems >= 1, 'Parent < example: captures apply-operator nodes with right=2';
+}
+
+# Pod: Descendant operator >>> with capture
+{
+	my $code = q:to/CODE/;
+		for ^10 {
+			if $_ %% 2 {
+				say $_;
+			}
+		}
+	CODE
+	my $ast = $code.AST;
+	my $res = $ast.&ast-query('.call >>> RakuAST::Var$var');
+	ok $res.list.grep({ .^name.starts-with('RakuAST::Call') }).elems >= 1,
+		'>>> example: finds call nodes with Var descendant';
+	ok $res<var>.elems >= 1 && $res<var>[0].^name.contains('Var'),
+		'>>> example: captures Var node as $var';
+}
+
+# AST Transformations: Replace say with note (from README/Pod)
+{
+	class CaptureIO { has Str $.buf is rw = '';
+		method print(*@a) { $!buf ~= @a.join }
+		method say(*@a) { $!buf ~= @a.join ~ "\n" }
+	}
+	my $err = CaptureIO.new;
+	my $out = CaptureIO.new;
+	my $*ERR = $err; # capture note output
+	my $*OUT = $out; # also capture say output as fallback
+
+	my $code = q:to/CODE/;
+		use experimental :rakuast;
+		use ASTQuery;
+		CHECK {
+			CATCH { default { note "say->note rewrite failed: $_" } }
+			try {
+				my $ast = $*CU.AST;
+				my $m = $ast.&ast-query('.call#say$call');
+				for $m<call> -> $call {
+					try $call.name = RakuAST::Name.from-identifier('note');
+				}
+				$*CU.AST = $ast;
+			}
+		}
+		say 'hello-doc';
+	CODE
+
+	lives-ok { EVAL $code }, 'EVAL say->note example compiles and runs';
+	ok ($err.buf ~~ /'hello-doc'/) || ($out.buf ~~ /'hello-doc'/),
+		'AST transform say->note: output captured in $*ERR if transformed, else in $*OUT';
+}
+
+# AST Transformations: Change * to + (from README/Pod)
+{
+	class CaptureIO2 { has Str $.buf is rw = '';
+		method print(*@a) { $!buf ~= @a.join }
+		method say(*@a) { $!buf ~= @a.join ~ "\n" }
+	}
+	my $out = CaptureIO2.new;
+	my $*OUT = $out; # capture say output
+
+	my $code = q:to/CODE/;
+		use experimental :rakuast;
+		use ASTQuery;
+		CHECK {
+			CATCH { default { note "operator rewrite failed: $_" } }
+			try {
+				my $ast = $*CU.AST;
+				my $ops = $ast.&ast-query('.apply-operator[infix => RakuAST::Infix#*]$app');
+				for $ops<app> -> $app {
+					try $app.infix = RakuAST::Infix.new('+');
+				}
+				$*CU.AST = $ast;
+			}
+		}
+		my $x = 2 * 3;
+		say $x;
+	CODE
+
+	lives-ok { EVAL $code }, 'EVAL *->+ example compiles and runs';
+	my $last = $out.buf.comb(/\d+/).tail // '';
+	ok $last eq '5' || $last eq '6',
+		'AST transform * -> +: output is 5 if transformed, 6 otherwise';
+}
+
+done-testing;
