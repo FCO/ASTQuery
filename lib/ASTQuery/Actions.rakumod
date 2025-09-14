@@ -1,5 +1,6 @@
 use ASTQuery::Matcher;
 use MONKEY-SEE-NO-EVAL;
+use experimental :rakuast;
 unit grammar ASTQuery::Actions;
 
 method TOP($/) { make $<str-or-list>.made }
@@ -53,6 +54,14 @@ method node($/) {
 	%map<name> = .head with %map<name>;
 	%map<code> := @=.flat with %map<code>;
 
+	# Validate unknown classes early with a helpful message
+	if %map<classes> -> @class-names {
+		my @unknown = @class-names.grep({ ::($_) ~~ Failure }).unique;
+		if @unknown {
+			die "Unknown class{ "es" if @unknown > 1 } { @unknown.map({ "'$_'" }).join: ", " }";
+		}
+	}
+
 	# Validate unknown &functions early with a helpful message
 	if %map<functions> -> @funcs {
 		my @unknown = @funcs.grep({ !ASTQuery::Matcher.function-exists($_) }).unique;
@@ -71,9 +80,7 @@ method node($/) {
 		}
 	}
 
-	#dd %map;
-	make my $a = ASTQuery::Matcher.new: |%map.Map;
-	#dd $a;
+	make ASTQuery::Matcher.new: |%map.Map;
 }
 
 method node-part:<node>($/)       { make (:classes($<ns>.made))                  }

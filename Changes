@@ -2,6 +2,8 @@ Revision history for ASTQuery
 
 {{$NEXT}}
 
+    - Docs: add REFERENCE.md with complete list of groups, built-in &functions, and id fields; add cross-links in README and module Pod
+
 0.0.4  2025-09-13T05:23:51+01:00
 
     - feat(parser): die on unknown &functions and .groups during selector parse; list known items in error messages

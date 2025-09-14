@@ -1026,13 +1026,9 @@ method ACCEPTS($node) {
 			$match.&add: self, $node, $validated;
 		}
 		return False unless $ans;
-		#$match.hash.push: $!name => $node if $!name;
-		#say $node.^name, " - ", $match.list if $*DEBUG;
 	}
 	$match
 }
-
-# --- functions (&function) ---
 
 multi method validate-functions($node, @funcs) {
 	print-validator-begin $node, @funcs;
@@ -1158,23 +1154,22 @@ multi method validate-class($node, @classes) {
 	}).first(*.so) // False
 }
 
-	multi method validate-ids($node, @ids) {
-		print-validator-begin $node, @ids;
-		POST print-validator-end $node, @ids, $_;
-		my $key = self.get-id-field: $node;
-		return False unless $key;
-		@ids.unique.map(-> $id {
-			my $value = $id;
-			if $key eq 'name'
-			&& $node.^name.starts-with('RakuAST::VarDeclaration')
-			&& $id ~~ Str
-			&& $id !~~ /^<[\$@%&]>/ {
-				$value = -> $n { $n.^can('name') && $n.name ~~ Str && $n.name.subst(/^<[\$@%&]>/, '') eq $id };
-			}
-			self.validate-atts: $node, %($key => $value)
-		}).first(*.so) // False
-	}
-
+multi method validate-ids($node, @ids) {
+	print-validator-begin $node, @ids;
+	POST print-validator-end $node, @ids, $_;
+	my $key = self.get-id-field: $node;
+	return False unless $key;
+	@ids.unique.map(-> $id {
+		my $value = $id;
+		if $key eq 'name'
+		&& $node.^name.starts-with('RakuAST::VarDeclaration')
+		&& $id ~~ Str
+		&& $id !~~ /^<[\$@%&]>/ {
+			$value = -> $n { $n.^can('name') && $n.name ~~ Str && $n.name.subst(/^<[\$@%&]>/, '') eq $id };
+		}
+		self.validate-atts: $node, %($key => $value)
+	}).first(*.so) // False
+}
 
 multi method validate-ids($node, $id) {
 	print-validator-begin $node, $id;
@@ -1248,8 +1243,7 @@ multi method validate-value(
 	::?CLASS $value
 ) {
 	my Any $nnode = $node."$key"();
-	$value.ACCEPTS($nnode)
-	&& ASTQuery::Match.new(:list[$nnode,])
+	$value.ACCEPTS($nnode) && ASTQuery::Match.new(:list[$nnode,])
 }
 
 multi method validate-value(
@@ -1264,74 +1258,74 @@ multi method validate-value(
 	}
 }
 
-	multi method validate-value(
- 		$node,
- 		$key,
- 		ASTQuery::Matcher::AttrRel $rel
- 	) {
- 		my $start = $node."$key"();
- 		return False unless $start.defined;
- 		given $rel.rel {
- 			when 'child'      { self.validate-child($start,      $rel.matcher) || False }
- 			when 'gchild'     { self.validate-gchild($start,     $rel.matcher) || False }
- 			when 'descendant' { self.validate-descendant($start, $rel.matcher) || False }
- 			default           { False }
- 		}
- 	}
+multi method validate-value(
+	$node,
+	$key,
+	ASTQuery::Matcher::AttrRel $rel
+) {
+	my $start = $node."$key"();
+	return False unless $start.defined;
+	do given $rel.rel {
+		when 'child'      { self.validate-child($start,      $rel.matcher) }
+		when 'gchild'     { self.validate-gchild($start,     $rel.matcher) }
+		when 'descendant' { self.validate-descendant($start, $rel.matcher) }
+		default           { False }
+	} || False
+}
 
- 	method attr-leaf-value($v is copy) {
- 		return $v unless $v.defined;
- 		loop {
- 			last unless $v.^name.starts-with('RakuAST');
- 			my $id = self.get-id-field($v) // last;
- 			last unless $v.^can($id);
- 			my $next = $v."$id"();
- 			last if $next === $v;
- 			$v = $next;
- 		}
- 		$v
- 	}
+method attr-leaf-value($v is copy) {
+	return $v unless $v.defined;
+	loop {
+		last unless $v.^name.starts-with('RakuAST');
+		my $id = self.get-id-field($v) // last;
+		last unless $v.^can($id);
+		my $next = $v."$id"();
+		last if $next === $v;
+		$v = $next;
+	}
+	$v
+}
 
- 	multi method validate-value(
- 		$node,
- 		$key,
- 		ASTQuery::Matcher::AttrOp $op
- 	) {
- 		return False unless $node.^can($key);
- 		my $current = $node."$key"();
- 		return False unless $current.defined;
- 	
- 		my $want = $op.value;
- 		my $cur-val = self.attr-leaf-value($current);
- 	
- 		my $ok = do given $op.op {
- 			when 'contains' {
- 				return False unless $cur-val.defined;
- 				if $want ~~ Regex {
- 					$cur-val ~~ $want
- 				} elsif ($cur-val ~~ Str) && ($want ~~ Str) {
- 					$cur-val.contains($want)
- 				} else {
- 					False
- 				}
- 			}
- 			when 'starts' {
- 				($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.starts-with($want)
- 			}
- 			when 'ends' {
- 				($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.ends-with($want)
- 			}
- 			when 'regex' {
- 				$cur-val ~~ $want
- 			}
- 			default { False }
- 		};
- 		$ok ?? ASTQuery::Match.new(:list[$node,]) !! False
- 	}
+multi method validate-value(
+	$node,
+	$key,
+	ASTQuery::Matcher::AttrOp $op
+) {
+	return False unless $node.^can($key);
+	my $current = $node."$key"();
+	return False unless $current.defined;
 
- 	# Generic value matcher: compare simple values or traverse into RakuAST nodes
- 
- 	multi method validate-value(
+	my $want = $op.value;
+	my $cur-val = self.attr-leaf-value($current);
+
+	my $ok = do given $op.op {
+		when 'contains' {
+			return False unless $cur-val.defined;
+			if $want ~~ Regex {
+				$cur-val ~~ $want
+			} elsif ($cur-val ~~ Str) && ($want ~~ Str) {
+				$cur-val.contains($want)
+			} else {
+				False
+			}
+		}
+		when 'starts' {
+			($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.starts-with($want)
+		}
+		when 'ends' {
+			($cur-val ~~ Str) && ($want ~~ Str) && $cur-val.ends-with($want)
+		}
+		when 'regex' {
+			$cur-val ~~ $want
+		}
+		default { False }
+	};
+	$ok ?? ASTQuery::Match.new(:list[$node,]) !! False
+}
+
+# Generic value matcher: compare simple values or traverse into RakuAST nodes
+
+multi method validate-value(
  
 	$node,
 	$key,

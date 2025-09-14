@@ -82,9 +82,17 @@ use ASTQuery;
 			CATCH { default { note "say->note rewrite failed: $_" } }
 			try {
 				my $ast = $*CU.AST;
-				my $m = $ast.&ast-query('.call#say$call');
-				for $m<call> -> $call {
-					try $call.name = RakuAST::Name.from-identifier('note');
+				# Capture both the call and its Statement::Expression ancestor
+				my $m = $ast.&ast-query('.call#say$call <<< RakuAST::Statement::Expression$stmt');
+				for ^$m<call>.elems -> $i {
+					my $call = $m<call>[$i];
+					my $stmt = $m<stmt>[$i];
+					# Rebuild the call and replace the expression
+					my $new = RakuAST::Call::Name::WithoutParentheses.new(
+						name => RakuAST::Name.from-identifier('note'),
+						args => $call.args,
+					);
+					try $stmt.set-expression($new);
 				}
 				$*CU.AST = $ast;
 			}
@@ -113,9 +121,20 @@ use ASTQuery;
 			CATCH { default { note "operator rewrite failed: $_" } }
 			try {
 				my $ast = $*CU.AST;
-				my $ops = $ast.&ast-query('.apply-operator[infix => RakuAST::Infix#*]$app');
-				for $ops<app> -> $app {
-					try $app.infix = RakuAST::Infix.new('+');
+				# Find ApplyInfix under a call and rebuild to use plus
+				my $m = $ast.&ast-query('.call$call >>> RakuAST::ApplyInfix#*$app');
+				for ^$m<app>.elems -> $i {
+					my $app  = $m<app>[$i];
+					my $call = $m<call>[$i];
+					my $args = $call.args;
+					my $idx = $args.args.first(* === $app, :k);
+					next unless $idx.defined;
+					my $new = RakuAST::ApplyInfix.new(
+						left  => $app.left,
+						infix => RakuAST::Infix.new('+'),
+						right => $app.right,
+					);
+					try $args.set-arg-at-pos($idx, $new);
 				}
 				$*CU.AST = $ast;
 			}

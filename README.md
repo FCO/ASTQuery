@@ -184,7 +184,7 @@ Groups (Common Aliases)
 
 You can extend these with `add-ast-group` and `add-to-ast-group`.
 
-See the full reference in [REFERENCE.md](./REFERENCE.md).
+See the full reference in [REFERENCE.md](REFERENCE.md) for a complete list of groups, built-in functions, and id fields.
 
 AST TRANSFORMATIONS
 ===================
@@ -193,48 +193,28 @@ Use ASTQuery in a `CHECK` phaser to rewrite the current compilation unit’s AST
 
   * Prereqs: `use experimental :rakuast;`
 
-  * Obtain the tree with `$*CU.AST`, mutate nodes, optionally assign back with `$*CU.AST = $ast`.
+  * Obtain the tree with `$*CU`, mutate nodes, optionally assign back with `$*CU = $ast` (currently `readonly`, but being discussed).
 
-Example: Replace `say` with `note`
-----------------------------------
-
-```raku
-use experimental :rakuast;
-use ASTQuery;
-
-CHECK {
-    my $ast = $*CU.AST;
-    my $m = $ast.&ast-query('.call#say$call');
-    for $m<call> -> $call {
-        CATCH { default { note "say->note rewrite failed: $_" } }
-        try $call.name = RakuAST::Name.from-identifier('note');
-    }
-    $*CU.AST = $ast;
-}
-```
-
-Example: Change operator `*` to `+`
------------------------------------
+Example: Add `"!!!"` at the end of each `say` call.
+---------------------------------------------------
 
 ```raku
 use experimental :rakuast;
 use ASTQuery;
 
 CHECK {
-    my $ast = $*CU.AST;
-    my $ops = $ast.&ast-query('.apply-operator[infix => RakuAST::Infix#*]$app');
-    for $ops<app> -> $app {
-        CATCH { default { note "operator rewrite failed: $_" } }
-        try $app.infix = RakuAST::Infix.new('+');
+    my $ast = $*CU;
+    for $ast.&ast-query(Q|.call#say|).list {
+        .args.push: RakuAST::StrLiteral.new: "!!!";
     }
-    $*CU.AST = $ast;
 }
+say "some text"; # prints "some text!!!"
 ```
 
 note
 ====
 
-RakuAST remains experimental; if a field is not `rw` on your Rakudo, rebuild the enclosing node as a fallback.
+RakuAST remains experimental; and how mutable it's going to be is still being discussed.
 
 EXAMPLES
 ========
@@ -275,6 +255,12 @@ say $result.list;  # Outputs matching nodes
 Explanation:
 
   * The query `.apply-operator[left=1, right=3]` matches Apply* nodes with left operand 1 and right operand 3.
+
+  * `ast-query` returns a ASTQuery::Match object, if printed, it will show all the occorrences of the pattern found on the original AST. It will be DEPARSEd and highlighted.
+
+  * `ASTQuery::Match:D.list` contains the list of all `RakuAST` nodes matched.
+
+  * `ASTQuery::Match:D.hash` contains a hash with the named matches matched.
 
 Example 2: Using the Ancestor Operator `<<<` and Named Captures
 ---------------------------------------------------------------

@@ -213,43 +213,24 @@ Use ASTQuery in a C<CHECK> phaser to rewrite the current compilation unit’s AS
 
 =item Prereqs: C<use experimental :rakuast;>
 
-=item Obtain the tree with C<$*CU.AST>, mutate nodes, optionally assign back with C<$*CU.AST = $ast>.
+=item Obtain the tree with C<$*CU>, mutate nodes, optionally assign back with C<$*CU = $ast> (currently C<readonly>, but being discussed).
 
-=head2 Example: Replace C<say> with C<note>
-
-=begin code :lang<raku>
-use experimental :rakuast;
-use ASTQuery;
-
-CHECK {
-    my $ast = $*CU.AST;
-    my $m = $ast.&ast-query('.call#say$call');
-    for $m<call> -> $call {
-        CATCH { default { note "say->note rewrite failed: $_" } }
-        try $call.name = RakuAST::Name.from-identifier('note');
-    }
-    $*CU.AST = $ast;
-}
-=end code
-
-=head2 Example: Change operator C<*> to C<+>
+=head2 Example: Add C<"!!!"> at the end of each C<say> call.
 
 =begin code :lang<raku>
 use experimental :rakuast;
 use ASTQuery;
 
 CHECK {
-    my $ast = $*CU.AST;
-    my $ops = $ast.&ast-query('.apply-operator[infix => RakuAST::Infix#*]$app');
-    for $ops<app> -> $app {
-        CATCH { default { note "operator rewrite failed: $_" } }
-        try $app.infix = RakuAST::Infix.new('+');
+    my $ast = $*CU;
+    for $ast.&ast-query(Q|.call#say|).list {
+        .args.push: RakuAST::StrLiteral.new: "!!!";
     }
-    $*CU.AST = $ast;
 }
+say "some text"; # prints "some text!!!"
 =end code
 
-=note RakuAST remains experimental; if a field is not C<rw> on your Rakudo, rebuild the enclosing node as a fallback.
+=note RakuAST remains experimental; and how mutable it's going to be is still being discussed.
 
 =head1 EXAMPLES
 
@@ -291,6 +272,13 @@ say $result.list;  # Outputs matching nodes
 Explanation:
 
 =item The query C<.apply-operator[left=1, right=3]> matches Apply* nodes with left operand 1 and right operand 3.
+
+=item C<ast-query> returns a ASTQuery::Match object, if printed, it will show all the occorrences of the pattern
+found on the original AST. It will be DEPARSEd and highlighted.
+
+=item C<ASTQuery::Match:D.list> contains the list of all C<RakuAST> nodes matched.
+
+=item C<ASTQuery::Match:D.hash> contains a hash with the named matches matched.
 
 =head2 Example 2: Using the Ancestor Operator `<<<` and Named Captures
 
