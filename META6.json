@@ -23,6 +23,9 @@
   ],
   "source-url": "https://github.com/FCO/ASTQuery.git",
   "tags": [
+    "ast",
+    "rakuast",
+    "query"
   ],
   "test-depends": [
   ],
