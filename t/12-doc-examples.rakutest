@@ -7,12 +7,13 @@ use ASTQuery;
 	my $code = q:to/CODE/;
 		sub f($x) { }
 		f 42;
-		say 1 && 3;
+		my $a;
+		say $a + 3;
 	CODE
 	my $ast = $code.AST;
 
-	my $ops = $ast.&ast-query('.apply-operator[left=1, right=3]');
-	ok $ops.list.elems >= 1, 'Quickstart: apply-operator[left=1,right=3] finds 1 && 3';
+	my $ops = $ast.&ast-query('.apply-operator[right=3]');
+	ok $ops.list.elems >= 1, 'Quickstart: apply-operator[right=3] finds $a + 3';
 
 	my $calls = $ast.&ast-query('&is-call[args=>>> .int]');
 	ok $calls.list.elems >= 1, 'Quickstart: &is-call[args=>>> .int] finds calls with int under args';
