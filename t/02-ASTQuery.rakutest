@@ -154,7 +154,7 @@ for %(
 	}.AST;
 
 	my $ops = $ast.&ast-query('.operator');
-	ok $ops.list.grep({ .^name ~~ /Infix|Prefix|Postfix/ }).elems >= 1,
+	ok $ops.list.grep({ .^name ~~ /Infix|Prefix|Postfix|Assignment/ }).elems >= 1,
 		'operator group finds operator nodes';
 
 	my $apply_ops = $ast.&ast-query('.apply-operator');

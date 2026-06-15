@@ -23,7 +23,7 @@ use Test;
 
 # Case B: ArgList contains an ApplyInfix; Ints are deeper descendants
 {
-	my $ast = q{ say 1 + 2 }.AST;
+	my $ast = q{ my $a; say $a + 2 }.AST;
 
 	ok !$ast.&ast-query('.call[args=> .int]').Bool,
 		".call[args=> .int] does not match when Int is not a direct child";

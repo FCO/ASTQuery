@@ -1040,7 +1040,7 @@ multi method validate-functions($node, @funcs) {
 
 method validate-function($node, Str $fname) {
 	my $impl = self!get-function($fname) // return False;
-	note "func=$fname type=", $impl.^name, " WHAT=", $impl.WHAT.perl if %*ENV<ASTQUERY_DEBUG>;
+	note "func=$fname type=", $impl.^name, " WHAT=", $impl.WHAT.raku if %*ENV<ASTQUERY_DEBUG>;
 	$impl($node) ?? ASTQuery::Match.new(:list[$node]) !! False
 }
 
