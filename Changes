@@ -1,6 +1,8 @@
 Revision history for ASTQuery
 
 {{$NEXT}}
+
+0.0.7  2026-06-16T00:17:55+01:00
     - New fixes for optimization
 
 0.0.6  2026-06-15T19:08:52+01:00
